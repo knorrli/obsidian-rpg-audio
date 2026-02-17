@@ -1,99 +1,88 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import {Plugin} from "obsidian";
+import {DEFAULT_SETTINGS, RpgAudioSettings, RpgAudioSettingTab} from "./settings";
+import {AudioManager} from "./audio-manager";
+import {SIDEBAR_VIEW_TYPE} from "./types";
+import {parseAudioBlock, RpgAudioCodeBlockPlayer} from "./ui/code-block-player";
+import {RpgAudioSidebarView} from "./ui/sidebar-view";
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class RpgAudioPlugin extends Plugin {
+	settings: RpgAudioSettings;
+	audioManager: AudioManager;
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
+		this.audioManager = new AudioManager(this.app);
+		this.audioManager.masterVolume = this.settings.masterVolume;
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		this.registerView(SIDEBAR_VIEW_TYPE, (leaf) => new RpgAudioSidebarView(leaf, this.audioManager));
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
+		this.registerMarkdownCodeBlockProcessor("rpg-audio", (source, el, ctx) => {
+			const def = parseAudioBlock(source);
+			if (!def) {
+				el.createDiv({cls: "rpg-audio-error", text: "Invalid rpg-audio block. Requires: id, name, type, and file/files."});
+				return;
 			}
+			const player = new RpgAudioCodeBlockPlayer(el, this.audioManager, def);
+			ctx.addChild(player);
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
+
+		this.addRibbonIcon("music", "RPG Audio", () => {
+			this.toggleSidebar();
+		});
+
 		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
+			id: "toggle-sidebar",
+			name: "Toggle audio sidebar",
+			callback: () => this.toggleSidebar(),
 		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
+
 		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			}
+			id: "stop-all",
+			name: "Stop all audio",
+			callback: () => this.audioManager.stopAll(),
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new RpgAudioSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
+		if (this.settings.autoOpenSidebar) {
+			this.app.workspace.onLayoutReady(() => this.activateSidebar());
+		}
 	}
 
 	onunload() {
+		this.audioManager.destroyAll();
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<RpgAudioSettings>);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-}
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+	private async toggleSidebar(): Promise<void> {
+		const existing = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE);
+		if (existing.length > 0) {
+			const first = existing[0];
+			if (first) first.detach();
+		} else {
+			await this.activateSidebar();
+		}
 	}
 
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	private async activateSidebar(): Promise<void> {
+		const existing = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE);
+		const first = existing[0];
+		if (first) {
+			this.app.workspace.revealLeaf(first);
+			return;
+		}
+		const leaf = this.app.workspace.getRightLeaf(false);
+		if (leaf) {
+			await leaf.setViewState({type: SIDEBAR_VIEW_TYPE, active: true});
+			this.app.workspace.revealLeaf(leaf);
+		}
 	}
 }

@@ -1,8 +1,250 @@
-/*
+/* RPG Audio Plugin Styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Inline code block player */
+.rpg-audio-player {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 4px 8px;
+	margin: 4px 0;
+	background: var(--background-secondary);
+}
 
-If your plugin does not need CSS, delete this file.
+.rpg-audio-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	flex-shrink: 1;
+}
 
-*/
+.rpg-audio-icon {
+	display: flex;
+	align-items: center;
+	color: var(--text-accent);
+	flex-shrink: 0;
+}
+
+.rpg-audio-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.rpg-audio-name {
+	font-weight: 600;
+	font-size: 0.9em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.rpg-audio-badge {
+	font-size: 0.65em;
+	padding: 1px 6px;
+	border-radius: 8px;
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	flex-shrink: 0;
+}
+
+.rpg-audio-status-inline {
+	font-size: 0.75em;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+/* Shared controls */
+.rpg-audio-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.rpg-audio-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 4px;
+	background: var(--interactive-normal);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.rpg-audio-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.rpg-audio-btn svg {
+	width: 12px;
+	height: 12px;
+}
+
+.rpg-audio-volume {
+	width: 60px;
+	height: 4px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: var(--background-modifier-border);
+	border-radius: 2px;
+	outline: none;
+}
+
+.rpg-audio-volume::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	cursor: pointer;
+}
+
+/* Status line — only used in sidebar track rows */
+.rpg-audio-status {
+	font-size: 0.8em;
+	color: var(--text-muted);
+	margin-top: 2px;
+	min-height: 1em;
+}
+
+.rpg-audio-error {
+	color: var(--text-error);
+	padding: 8px;
+	border: 1px solid var(--background-modifier-error-border, var(--text-error));
+	border-radius: 4px;
+	font-size: 0.9em;
+}
+
+/* Sidebar */
+.rpg-audio-sidebar {
+	padding: 0;
+	overflow-y: auto;
+}
+
+.rpg-audio-sidebar-header {
+	padding: 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.rpg-audio-sidebar-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.rpg-audio-sidebar-title {
+	font-weight: 700;
+	font-size: 1.1em;
+}
+
+.rpg-audio-stop-all-btn {
+	color: var(--text-error);
+}
+
+.rpg-audio-sidebar-volume-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.rpg-audio-sidebar-vol-label {
+	display: flex;
+	align-items: center;
+	color: var(--text-muted);
+}
+
+.rpg-audio-sidebar-vol-label svg {
+	width: 16px;
+	height: 16px;
+}
+
+.rpg-audio-master-volume {
+	flex: 1;
+}
+
+.rpg-audio-sidebar-content {
+	padding: 8px 12px;
+}
+
+.rpg-audio-sidebar-section {
+	margin-bottom: 16px;
+}
+
+.rpg-audio-sidebar-section-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+	font-size: 0.85em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-muted);
+	padding: 6px 4px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	user-select: none;
+	border-radius: 4px;
+}
+
+.rpg-audio-sidebar-section-header:hover {
+	background: var(--background-modifier-hover);
+}
+
+.rpg-audio-section-chevron {
+	display: flex;
+	align-items: center;
+	transition: transform 150ms ease;
+}
+
+.rpg-audio-section-chevron svg {
+	width: 14px;
+	height: 14px;
+}
+
+.rpg-audio-sidebar-section-header.is-collapsed .rpg-audio-section-chevron {
+	transform: rotate(-90deg);
+}
+
+.rpg-audio-section-count {
+	margin-left: auto;
+	font-size: 0.85em;
+	color: var(--text-faint);
+	font-weight: 400;
+}
+
+.rpg-audio-sidebar-section-body {
+	padding-top: 4px;
+}
+
+.rpg-audio-sidebar-track {
+	padding: 8px;
+	border-radius: 6px;
+	margin-bottom: 4px;
+}
+
+.rpg-audio-sidebar-track:hover {
+	background: var(--background-modifier-hover);
+}
+
+.rpg-audio-sidebar-track-name {
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.rpg-audio-empty-state {
+	color: var(--text-muted);
+	text-align: center;
+	padding: 24px 12px;
+	font-style: italic;
+}
