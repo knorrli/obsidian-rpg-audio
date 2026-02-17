@@ -62,7 +62,7 @@ export class FadeEngine {
 		const tick = (now: number) => {
 			for (const fade of this.activeFades.values()) {
 				const elapsed = now - fade.startTime;
-				const t = Math.min(elapsed / fade.duration, 1);
+				const t = Math.max(0, Math.min(elapsed / fade.duration, 1));
 				const value = fade.from + (fade.to - fade.from) * t;
 				fade.onTick(value);
 				if (t >= 1) {

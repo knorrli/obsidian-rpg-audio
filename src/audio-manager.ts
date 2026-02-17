@@ -1,4 +1,4 @@
-import {App, Events} from "obsidian";
+import { App, Events } from "obsidian";
 import {
 	AudioTrackDef,
 	AudioTrackState,
@@ -7,7 +7,7 @@ import {
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
 } from "./types";
-import {FadeEngine} from "./fade-engine";
+import { FadeEngine } from "./fade-engine";
 
 export class AudioManager extends Events {
 	private app: App;
@@ -92,11 +92,13 @@ export class AudioManager extends Events {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
+		let crossfading = false;
 		if (state.def.exclusive) {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && other.def.type === state.def.type && other.playState === PlayState.Playing) {
 					if (this._crossfadeDuration > 0) {
 						this.fadeOutAndStop(otherId, this._crossfadeDuration);
+						crossfading = true;
 					} else {
 						this.stop(otherId);
 					}
@@ -104,7 +106,7 @@ export class AudioManager extends Events {
 			}
 		}
 
-		const shouldFadeIn = state.def.exclusive && this._crossfadeDuration > 0;
+		const shouldFadeIn = crossfading;
 
 		const fileIndex = state.currentIndex;
 		const filePath = state.def.files[fileIndex];
