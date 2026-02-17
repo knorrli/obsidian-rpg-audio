@@ -159,9 +159,10 @@ export class RpgAudioSidebarView extends ItemView {
 
 	private buildTrackRow(parent: HTMLElement, track: AudioTrackState): void {
 		const row = parent.createDiv({cls: "rpg-audio-sidebar-track"});
-		row.createDiv({cls: "rpg-audio-sidebar-track-name", text: track.def.name});
+		const topRow = row.createDiv({cls: "rpg-audio-sidebar-track-top"});
+		topRow.createDiv({cls: "rpg-audio-sidebar-track-name", text: track.def.name});
 
-		const controls = createPlayerControls(row, {
+		const controls = createPlayerControls(topRow, {
 			onPlay: () => this.manager.play(track.def.id),
 			onPause: () => this.manager.pause(track.def.id),
 			onStop: () => this.manager.stop(track.def.id),

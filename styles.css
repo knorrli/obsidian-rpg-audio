@@ -111,10 +111,13 @@
 
 /* Status line — only used in sidebar track rows */
 .rpg-audio-status {
-	font-size: 0.8em;
+	font-size: 0.75em;
 	color: var(--text-muted);
-	margin-top: 2px;
-	min-height: 1em;
+	margin-top: 1px;
+}
+
+.rpg-audio-status:empty {
+	display: none;
 }
 
 .rpg-audio-error {
@@ -228,18 +231,27 @@
 }
 
 .rpg-audio-sidebar-track {
-	padding: 8px;
+	padding: 4px 8px;
 	border-radius: 6px;
-	margin-bottom: 4px;
+	margin-bottom: 2px;
 }
 
 .rpg-audio-sidebar-track:hover {
 	background: var(--background-modifier-hover);
 }
 
+.rpg-audio-sidebar-track-top {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
 .rpg-audio-sidebar-track-name {
 	font-weight: 500;
-	margin-bottom: 4px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
 }
 
 .rpg-audio-empty-state {
