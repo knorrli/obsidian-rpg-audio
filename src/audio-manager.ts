@@ -82,6 +82,14 @@ export class AudioManager extends Events {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
+		if (state.def.exclusive) {
+			for (const [otherId, other] of this.tracks) {
+				if (otherId !== id && other.def.type === state.def.type && other.playState === PlayState.Playing) {
+					this.stop(otherId);
+				}
+			}
+		}
+
 		const fileIndex = state.currentIndex;
 		const filePath = state.def.files[fileIndex];
 		if (!filePath) return;
