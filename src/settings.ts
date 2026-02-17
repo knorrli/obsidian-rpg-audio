@@ -33,6 +33,7 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.audioFolder)
 				.onChange(async (value) => {
 					this.plugin.settings.audioFolder = value;
+					this.plugin.audioManager.audioFolder = value;
 					await this.plugin.saveSettings();
 				}));
 

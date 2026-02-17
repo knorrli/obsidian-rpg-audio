@@ -127,13 +127,19 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.controls.volumeSlider.value = String(state.volume);
 
 		let statusText = "";
-		if (state.playState === PlayState.Playing) {
-			statusText = "Playing";
-			if (state.def.files.length > 1) {
-				statusText += ` (${state.currentIndex + 1}/${state.def.files.length})`;
+		if (state.error) {
+			statusText = state.error;
+			this.statusEl.addClass("rpg-audio-error-text");
+		} else {
+			this.statusEl.removeClass("rpg-audio-error-text");
+			if (state.playState === PlayState.Playing) {
+				statusText = "Playing";
+				if (state.def.files.length > 1) {
+					statusText += ` (${state.currentIndex + 1}/${state.def.files.length})`;
+				}
+			} else if (state.playState === PlayState.Paused) {
+				statusText = "Paused";
 			}
-		} else if (state.playState === PlayState.Paused) {
-			statusText = "Paused";
 		}
 		this.statusEl.setText(statusText);
 	}

@@ -190,13 +190,19 @@ export class RpgAudioSidebarView extends ItemView {
 
 	private setStatusText(el: HTMLElement, state: AudioTrackState): void {
 		let text = "";
-		if (state.playState === PlayState.Playing) {
-			text = "Playing";
-			if (state.def.files.length > 1) {
-				text += ` (${state.currentIndex + 1}/${state.def.files.length})`;
+		if (state.error) {
+			text = state.error;
+			el.addClass("rpg-audio-error-text");
+		} else {
+			el.removeClass("rpg-audio-error-text");
+			if (state.playState === PlayState.Playing) {
+				text = "Playing";
+				if (state.def.files.length > 1) {
+					text += ` (${state.currentIndex + 1}/${state.def.files.length})`;
+				}
+			} else if (state.playState === PlayState.Paused) {
+				text = "Paused";
 			}
-		} else if (state.playState === PlayState.Paused) {
-			text = "Paused";
 		}
 		el.setText(text);
 	}

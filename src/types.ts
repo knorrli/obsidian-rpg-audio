@@ -17,6 +17,7 @@ export interface AudioTrackState {
 	playState: PlayState;
 	volume: number;
 	currentIndex: number;
+	error: string | null;
 }
 
 export const EVENT_TRACK_CHANGED = "track-changed";

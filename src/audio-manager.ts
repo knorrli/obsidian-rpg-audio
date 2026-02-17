@@ -14,10 +14,15 @@ export class AudioManager extends Events {
 	private audioElements: Map<string, HTMLAudioElement> = new Map();
 	private orphanTimers: Map<string, number> = new Map();
 	private _masterVolume = 1.0;
+	private _audioFolder = "";
 
 	constructor(app: App) {
 		super();
 		this.app = app;
+	}
+
+	set audioFolder(value: string) {
+		this._audioFolder = value;
 	}
 
 	get masterVolume(): number {
@@ -55,6 +60,7 @@ export class AudioManager extends Events {
 			playState: PlayState.Stopped,
 			volume: 1.0,
 			currentIndex: 0,
+			error: null,
 		});
 		this.trigger(EVENT_TRACKS_UPDATED);
 	}
@@ -81,7 +87,12 @@ export class AudioManager extends Events {
 		if (!filePath) return;
 
 		const resourceUrl = this.resolveFile(filePath);
-		if (!resourceUrl) return;
+		if (!resourceUrl) {
+			state.error = `File not found: ${filePath}`;
+			state.playState = PlayState.Stopped;
+			this.trigger(EVENT_TRACK_CHANGED, id);
+			return;
+		}
 
 		let el = this.audioElements.get(id);
 		if (!el) {
@@ -98,9 +109,11 @@ export class AudioManager extends Events {
 		try {
 			await el.play();
 			state.playState = PlayState.Playing;
+			state.error = null;
 			this.applyVolume(id);
 		} catch (e) {
 			console.error(`RPG Audio: failed to play track "${id}"`, e);
+			state.error = `Playback failed: ${filePath}`;
 			state.playState = PlayState.Stopped;
 		}
 		this.trigger(EVENT_TRACK_CHANGED, id);
@@ -119,7 +132,7 @@ export class AudioManager extends Events {
 
 	stop(id: string): void {
 		const state = this.tracks.get(id);
-		if (!state || state.playState === PlayState.Stopped) return;
+		if (!state) return;
 
 		const el = this.audioElements.get(id);
 		if (el) {
@@ -129,6 +142,7 @@ export class AudioManager extends Events {
 
 		state.playState = PlayState.Stopped;
 		state.currentIndex = 0;
+		state.error = null;
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
@@ -221,7 +235,12 @@ export class AudioManager extends Events {
 		if (!filePath) return;
 
 		const resourceUrl = this.resolveFile(filePath);
-		if (!resourceUrl) return;
+		if (!resourceUrl) {
+			state.error = `File not found: ${filePath}`;
+			state.playState = PlayState.Stopped;
+			this.trigger(EVENT_TRACK_CHANGED, id);
+			return;
+		}
 
 		const el = this.audioElements.get(id);
 		if (!el) return;
@@ -230,17 +249,28 @@ export class AudioManager extends Events {
 		el.loop = false;
 		try {
 			await el.play();
+			state.error = null;
 			this.applyVolume(id);
 		} catch (e) {
 			console.error(`RPG Audio: failed to play track "${id}"`, e);
+			state.error = `Playback failed: ${filePath}`;
 			state.playState = PlayState.Stopped;
 		}
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
 	private resolveFile(path: string): string | null {
-		const file = this.app.vault.getFileByPath(path);
-		if (!file) return null;
-		return this.app.vault.getResourcePath(file);
+		// Try the path as-is first (absolute vault path)
+		let file = this.app.vault.getFileByPath(path);
+		if (file) return this.app.vault.getResourcePath(file);
+
+		// Try relative to the configured audio folder
+		if (this._audioFolder) {
+			const prefixed = `${this._audioFolder}/${path}`;
+			file = this.app.vault.getFileByPath(prefixed);
+			if (file) return this.app.vault.getResourcePath(file);
+		}
+
+		return null;
 	}
 }
