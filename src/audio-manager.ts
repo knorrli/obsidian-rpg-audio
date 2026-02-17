@@ -7,6 +7,7 @@ import {
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
 } from "./types";
+import {FadeEngine} from "./fade-engine";
 
 export class AudioManager extends Events {
 	private app: App;
@@ -15,6 +16,9 @@ export class AudioManager extends Events {
 	private orphanTimers: Map<string, number> = new Map();
 	private _masterVolume = 1.0;
 	private _audioFolder = "";
+	private fades = new FadeEngine();
+	private fadeMultipliers: Map<string, number> = new Map();
+	private _crossfadeDuration = 0;
 
 	constructor(app: App) {
 		super();
@@ -23,6 +27,10 @@ export class AudioManager extends Events {
 
 	set audioFolder(value: string) {
 		this._audioFolder = value;
+	}
+
+	set crossfadeDuration(value: number) {
+		this._crossfadeDuration = value;
 	}
 
 	get masterVolume(): number {
@@ -66,6 +74,8 @@ export class AudioManager extends Events {
 	}
 
 	unregister(id: string): void {
+		this.fades.cancel(id);
+		this.fadeMultipliers.delete(id);
 		this.stop(id);
 		const el = this.audioElements.get(id);
 		if (el) {
@@ -85,10 +95,16 @@ export class AudioManager extends Events {
 		if (state.def.exclusive) {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && other.def.type === state.def.type && other.playState === PlayState.Playing) {
-					this.stop(otherId);
+					if (this._crossfadeDuration > 0) {
+						this.fadeOutAndStop(otherId, this._crossfadeDuration);
+					} else {
+						this.stop(otherId);
+					}
 				}
 			}
 		}
+
+		const shouldFadeIn = state.def.exclusive && this._crossfadeDuration > 0;
 
 		const fileIndex = state.currentIndex;
 		const filePath = state.def.files[fileIndex];
@@ -118,7 +134,11 @@ export class AudioManager extends Events {
 			await el.play();
 			state.playState = PlayState.Playing;
 			state.error = null;
-			this.applyVolume(id);
+			if (shouldFadeIn) {
+				this.fadeIn(id, this._crossfadeDuration);
+			} else {
+				this.applyVolume(id);
+			}
 		} catch (e) {
 			console.error(`RPG Audio: failed to play track "${id}"`, e);
 			state.error = `Playback failed: ${filePath}`;
@@ -142,6 +162,9 @@ export class AudioManager extends Events {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
+		this.fades.cancel(id);
+		this.fadeMultipliers.delete(id);
+
 		const el = this.audioElements.get(id);
 		if (el) {
 			el.pause();
@@ -155,6 +178,8 @@ export class AudioManager extends Events {
 	}
 
 	stopAll(): void {
+		this.fades.cancelAll();
+		this.fadeMultipliers.clear();
 		for (const [id] of this.tracks) {
 			this.stop(id);
 		}
@@ -190,6 +215,8 @@ export class AudioManager extends Events {
 	}
 
 	destroyAll(): void {
+		this.fades.destroy();
+		this.fadeMultipliers.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
 		}
@@ -207,7 +234,7 @@ export class AudioManager extends Events {
 		const state = this.tracks.get(id);
 		const el = this.audioElements.get(id);
 		if (!state || !el) return;
-		el.volume = state.volume * this._masterVolume;
+		el.volume = state.volume * this._masterVolume * (this.fadeMultipliers.get(id) ?? 1);
 	}
 
 	private setupAudioElement(id: string, el: HTMLAudioElement): void {
@@ -265,6 +292,25 @@ export class AudioManager extends Events {
 			state.playState = PlayState.Stopped;
 		}
 		this.trigger(EVENT_TRACK_CHANGED, id);
+	}
+
+	private fadeOutAndStop(id: string, duration: number): void {
+		const current = this.fadeMultipliers.get(id) ?? 1;
+		this.fades.start(id, current, 0, duration, (value) => {
+			this.fadeMultipliers.set(id, value);
+			this.applyVolume(id);
+		}).then(() => {
+			this.stop(id);
+		});
+	}
+
+	private fadeIn(id: string, duration: number): void {
+		this.fadeMultipliers.set(id, 0);
+		this.applyVolume(id);
+		this.fades.start(id, 0, 1, duration, (value) => {
+			this.fadeMultipliers.set(id, value);
+			this.applyVolume(id);
+		});
 	}
 
 	private resolveFile(path: string): string | null {

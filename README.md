@@ -84,7 +84,7 @@ file: audio/music/tavern.mp3
 ```
 ````
 
-With `exclusive: true`, starting this track will automatically stop any other playing track that has `type: music`.
+With `exclusive: true`, starting this track will automatically stop any other playing track that has `type: music`. If a crossfade duration is configured in settings, the outgoing track fades out while the new one fades in.
 
 ## Sidebar
 
@@ -100,6 +100,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 - **Audio folder** — Vault-relative folder where your audio files are stored (default: `audio`).
 - **Master volume** — Global volume multiplier applied to all tracks.
 - **Auto-open sidebar** — Automatically open the sidebar when the plugin loads.
+- **Crossfade duration** — Duration in milliseconds of the crossfade between exclusive tracks (default: 2000ms). Set to 0 to disable crossfading and use hard stops.
 
 ## Installing
 
