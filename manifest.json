@@ -4,7 +4,7 @@
 	"version": "0.1.0",
 	"minAppVersion": "1.5.7",
 	"description": "Play audio tracks (one-shots, loops, playlists) for tabletop RPG sessions directly from your notes.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
+	"author": "Knorrli",
+	"authorUrl": "https://github.com/knorrli/obsidian-rpg-audio",
 	"isDesktopOnly": true
 }
