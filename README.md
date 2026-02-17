@@ -24,6 +24,7 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `name`  | Yes      | Display name shown in the player widget and sidebar. |
 | `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
 | `loop`  | No       | `true` or `false`. Whether the track loops after finishing. Defaults to `true` for multi-file tracks, `false` for single-file tracks. |
+| `exclusive` | No   | `true` or `false`. When `true`, starting this track stops all other playing tracks that share the same `type`. Defaults to `false`. |
 | `file`  | *        | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
 | `files` | *        | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
 
@@ -69,6 +70,21 @@ files:
 ````
 
 Multi-file tracks loop by default. Set `loop: false` to stop after the last file.
+
+**Exclusive music tracks (only one plays at a time):**
+
+````markdown
+```rpg-audio
+id: tavern-music
+name: Tavern Music
+type: music
+exclusive: true
+loop: true
+file: audio/music/tavern.mp3
+```
+````
+
+With `exclusive: true`, starting this track will automatically stop any other playing track that has `type: music`.
 
 ## Sidebar
 
