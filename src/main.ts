@@ -27,8 +27,9 @@ export default class RpgAudioPlugin extends Plugin {
 			ctx.addChild(player);
 		});
 
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		this.addRibbonIcon("music", "RPG Audio", () => {
-			this.toggleSidebar();
+			void this.toggleSidebar();
 		});
 
 		this.addCommand({
@@ -76,13 +77,13 @@ export default class RpgAudioPlugin extends Plugin {
 		const existing = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE);
 		const first = existing[0];
 		if (first) {
-			this.app.workspace.revealLeaf(first);
+			await this.app.workspace.revealLeaf(first);
 			return;
 		}
 		const leaf = this.app.workspace.getRightLeaf(false);
 		if (leaf) {
 			await leaf.setViewState({type: SIDEBAR_VIEW_TYPE, active: true});
-			this.app.workspace.revealLeaf(leaf);
+			await this.app.workspace.revealLeaf(leaf);
 		}
 	}
 }

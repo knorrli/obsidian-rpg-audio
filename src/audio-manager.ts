@@ -72,7 +72,7 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACKS_UPDATED);
 	}
 
-	play(id: string): void {
+	async play(id: string): Promise<void> {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
@@ -90,16 +90,19 @@ export class AudioManager extends Events {
 			this.setupAudioElement(id, el);
 		}
 
-		if (state.playState === PlayState.Paused && el.src) {
-			el.play();
-		} else {
+		if (!(state.playState === PlayState.Paused && el.src)) {
 			el.src = resourceUrl;
 			el.loop = state.def.loop && state.def.files.length === 1;
-			el.play();
 		}
 
-		state.playState = PlayState.Playing;
-		this.applyVolume(id);
+		try {
+			await el.play();
+			state.playState = PlayState.Playing;
+			this.applyVolume(id);
+		} catch (e) {
+			console.error(`RPG Audio: failed to play track "${id}"`, e);
+			state.playState = PlayState.Stopped;
+		}
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
@@ -194,10 +197,10 @@ export class AudioManager extends Events {
 				const nextIndex = state.currentIndex + 1;
 				if (nextIndex < state.def.files.length) {
 					state.currentIndex = nextIndex;
-					this.playCurrentIndex(id);
+					void this.playCurrentIndex(id);
 				} else if (state.def.loop) {
 					state.currentIndex = 0;
-					this.playCurrentIndex(id);
+					void this.playCurrentIndex(id);
 				} else {
 					state.playState = PlayState.Stopped;
 					state.currentIndex = 0;
@@ -210,7 +213,7 @@ export class AudioManager extends Events {
 		});
 	}
 
-	private playCurrentIndex(id: string): void {
+	private async playCurrentIndex(id: string): Promise<void> {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
@@ -225,8 +228,13 @@ export class AudioManager extends Events {
 
 		el.src = resourceUrl;
 		el.loop = false;
-		el.play();
-		this.applyVolume(id);
+		try {
+			await el.play();
+			this.applyVolume(id);
+		} catch (e) {
+			console.error(`RPG Audio: failed to play track "${id}"`, e);
+			state.playState = PlayState.Stopped;
+		}
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 

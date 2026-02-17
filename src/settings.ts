@@ -29,7 +29,7 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 			.setName("Audio folder")
 			.setDesc("Vault-relative folder where audio files are stored")
 			.addText(text => text
-				.setPlaceholder("audio")
+				.setPlaceholder("Audio")
 				.setValue(this.plugin.settings.audioFolder)
 				.onChange(async (value) => {
 					this.plugin.settings.audioFolder = value;

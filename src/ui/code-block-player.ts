@@ -112,7 +112,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		const initialVolume = currentState ? currentState.volume : 1.0;
 
 		this.controls = createPlayerControls(el, {
-			onPlay: () => this.manager.play(this.def.id),
+			onPlay: () => void this.manager.play(this.def.id),
 			onPause: () => this.manager.pause(this.def.id),
 			onStop: () => this.manager.stop(this.def.id),
 			onVolumeChange: (v) => this.manager.setTrackVolume(this.def.id, v),

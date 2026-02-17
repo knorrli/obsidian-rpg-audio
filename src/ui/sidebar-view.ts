@@ -27,6 +27,7 @@ export class RpgAudioSidebarView extends ItemView {
 	}
 
 	getDisplayText(): string {
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		return "RPG Audio";
 	}
 
@@ -163,7 +164,7 @@ export class RpgAudioSidebarView extends ItemView {
 		topRow.createDiv({cls: "rpg-audio-sidebar-track-name", text: track.def.name});
 
 		const controls = createPlayerControls(topRow, {
-			onPlay: () => this.manager.play(track.def.id),
+			onPlay: () => void this.manager.play(track.def.id),
 			onPause: () => this.manager.pause(track.def.id),
 			onStop: () => this.manager.stop(track.def.id),
 			onVolumeChange: (v) => this.manager.setTrackVolume(track.def.id, v),
