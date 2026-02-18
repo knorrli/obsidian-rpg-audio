@@ -146,8 +146,15 @@
 .rpg-audio-sidebar-title-row {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	gap: 8px;
 	margin-bottom: 8px;
+}
+
+.rpg-audio-global-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
 }
 
 .rpg-audio-sidebar-title {
