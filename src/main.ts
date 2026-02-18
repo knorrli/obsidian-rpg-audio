@@ -1,9 +1,9 @@
-import {Notice, Plugin} from "obsidian";
-import {DEFAULT_SETTINGS, RpgAudioSettings, RpgAudioSettingTab} from "./settings";
-import {AudioManager} from "./audio-manager";
-import {SIDEBAR_VIEW_TYPE} from "./types";
-import {parseAudioBlock, RpgAudioCodeBlockPlayer} from "./ui/code-block-player";
-import {RpgAudioSidebarView} from "./ui/sidebar-view";
+import { Notice, Plugin } from "obsidian";
+import { DEFAULT_SETTINGS, RpgAudioSettings, RpgAudioSettingTab } from "./settings";
+import { AudioManager } from "./audio-manager";
+import { SIDEBAR_VIEW_TYPE } from "./types";
+import { parseAudioBlock, RpgAudioCodeBlockPlayer } from "./ui/code-block-player";
+import { RpgAudioSidebarView } from "./ui/sidebar-view";
 
 export default class RpgAudioPlugin extends Plugin {
 	settings: RpgAudioSettings;
@@ -22,7 +22,7 @@ export default class RpgAudioPlugin extends Plugin {
 		this.registerMarkdownCodeBlockProcessor("rpg-audio", (source, el, ctx) => {
 			const def = parseAudioBlock(source);
 			if (!def) {
-				el.createDiv({cls: "rpg-audio-error", text: "Invalid rpg-audio block. Requires: id, name, type, and file/files."});
+				el.createDiv({ cls: "rpg-audio-error", text: "Invalid rpg-audio block. Requires: id, name, type, and file/files." });
 				return;
 			}
 			const player = new RpgAudioCodeBlockPlayer(el, this.audioManager, def);
@@ -50,6 +50,7 @@ export default class RpgAudioPlugin extends Plugin {
 			const action = params.action;
 			const id = params.id;
 			if (!action || !id) {
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				new Notice("RPG Audio: missing 'action' or 'id' parameter");
 				return;
 			}
@@ -116,7 +117,7 @@ export default class RpgAudioPlugin extends Plugin {
 		}
 		const leaf = this.app.workspace.getRightLeaf(false);
 		if (leaf) {
-			await leaf.setViewState({type: SIDEBAR_VIEW_TYPE, active: true});
+			await leaf.setViewState({ type: SIDEBAR_VIEW_TYPE, active: true });
 			await this.app.workspace.revealLeaf(leaf);
 		}
 	}
