@@ -99,7 +99,7 @@ export class AudioManager extends Events {
 		let crossfading = false;
 		if (state.def.exclusive) {
 			for (const [otherId, other] of this.tracks) {
-				if (otherId !== id && other.def.type === state.def.type && other.playState === PlayState.Playing) {
+				if (otherId !== id && (other.def.type === state.def.type || state.def.excludeTypes.includes(other.def.type)) && other.playState === PlayState.Playing) {
 					if (this._crossfadeDuration > 0) {
 						this.fadeOutAndStop(otherId, this._crossfadeDuration);
 						crossfading = true;
