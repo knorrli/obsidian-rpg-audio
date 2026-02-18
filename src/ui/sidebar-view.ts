@@ -69,6 +69,18 @@ export class RpgAudioSidebarView extends ItemView {
 		const titleRow = header.createDiv({cls: "rpg-audio-sidebar-title-row"});
 		titleRow.createSpan({cls: "rpg-audio-sidebar-title", text: "RPG Audio"});
 
+		const fadeDuration = () => Math.max(this.manager.crossfadeDuration, 1000);
+
+		const fadeInAllBtn = titleRow.createEl("button", {cls: "rpg-audio-btn"});
+		setIcon(fadeInAllBtn, "volume-2");
+		fadeInAllBtn.setAttribute("aria-label", "Fade in all");
+		fadeInAllBtn.addEventListener("click", () => this.manager.fadeInAll(fadeDuration()));
+
+		const fadeOutAllBtn = titleRow.createEl("button", {cls: "rpg-audio-btn"});
+		setIcon(fadeOutAllBtn, "volume-x");
+		fadeOutAllBtn.setAttribute("aria-label", "Fade out all");
+		fadeOutAllBtn.addEventListener("click", () => this.manager.fadeOutAll(fadeDuration()));
+
 		const stopAllBtn = titleRow.createEl("button", {cls: "rpg-audio-btn rpg-audio-stop-all-btn"});
 		setIcon(stopAllBtn, "square");
 		stopAllBtn.setAttribute("aria-label", "Stop all");

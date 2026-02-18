@@ -231,11 +231,6 @@
 }
 
 .rpg-audio-section-fade-btn {
-	opacity: 0;
-	transition: opacity 150ms ease;
-}
-
-.rpg-audio-sidebar-section-header:hover .rpg-audio-section-fade-btn {
 	opacity: 1;
 }
 
