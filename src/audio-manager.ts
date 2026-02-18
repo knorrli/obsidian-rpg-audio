@@ -164,17 +164,6 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	async toggle(id: string): Promise<void> {
-		const state = this.tracks.get(id);
-		if (!state) return;
-
-		if (state.playState === PlayState.Playing) {
-			this.stop(id);
-		} else {
-			await this.play(id);
-		}
-	}
-
 	stop(id: string): void {
 		const state = this.tracks.get(id);
 		if (!state) return;

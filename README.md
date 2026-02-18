@@ -86,31 +86,6 @@ file: audio/music/tavern.mp3
 
 With `stops: music`, starting this track will automatically stop any other playing track that has `type: music`. You can list multiple types separated by commas (e.g. `stops: music, ambience`). If a crossfade duration is configured in settings, the outgoing tracks fade out while the new one fades in.
 
-## URI Links
-
-You can control tracks via URI links, which is useful for map markers or clickable links in notes:
-
-```
-obsidian://rpg-audio?action=toggle&id=campfire
-```
-
-Supported actions:
-
-| Action   | Description |
-|----------|-------------|
-| `play`   | Start the track |
-| `stop`   | Stop the track |
-| `pause`  | Pause the track |
-| `toggle` | Play if stopped/paused, stop if playing |
-
-The track must be defined in a visible `rpg-audio` code block. If the track ID is not found, an error notice is shown.
-
-**Markdown link example:**
-
-```markdown
-[Campfire sounds](obsidian://rpg-audio?action=toggle&id=campfire)
-```
-
 ## Sidebar
 
 Click the music note icon in the ribbon (or run the **Toggle audio sidebar** command) to open a sidebar that shows all registered tracks with playback controls.

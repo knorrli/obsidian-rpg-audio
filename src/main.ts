@@ -1,4 +1,4 @@
-import { Notice, Plugin } from "obsidian";
+import { Plugin } from "obsidian";
 import { DEFAULT_SETTINGS, RpgAudioSettings, RpgAudioSettingTab } from "./settings";
 import { AudioManager } from "./audio-manager";
 import { SIDEBAR_VIEW_TYPE } from "./types";
@@ -44,39 +44,6 @@ export default class RpgAudioPlugin extends Plugin {
 			id: "stop-all",
 			name: "Stop all audio",
 			callback: () => this.audioManager.stopAll(),
-		});
-
-		this.registerObsidianProtocolHandler("rpg-audio", (params) => {
-			const action = params.action;
-			const id = params.id;
-			if (!action || !id) {
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
-				new Notice("RPG Audio: missing 'action' or 'id' parameter");
-				return;
-			}
-
-			const track = this.audioManager.getTrack(id);
-			if (!track) {
-				new Notice(`RPG Audio: track "${id}" not found`);
-				return;
-			}
-
-			switch (action) {
-				case "play":
-					void this.audioManager.play(id);
-					break;
-				case "stop":
-					this.audioManager.stop(id);
-					break;
-				case "pause":
-					this.audioManager.pause(id);
-					break;
-				case "toggle":
-					void this.audioManager.toggle(id);
-					break;
-				default:
-					new Notice(`RPG Audio: unknown action "${action}"`);
-			}
 		});
 
 		this.addSettingTab(new RpgAudioSettingTab(this.app, this));
