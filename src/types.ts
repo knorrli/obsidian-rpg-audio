@@ -10,8 +10,7 @@ export interface AudioTrackDef {
 	type: string;
 	files: string[];
 	loop: boolean;
-	exclusive: boolean;
-	excludeTypes: string[];
+	stops: string[];
 }
 
 export interface AudioTrackState {
