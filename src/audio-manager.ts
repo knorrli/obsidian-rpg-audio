@@ -29,6 +29,10 @@ export class AudioManager extends Events {
 		this._audioFolder = value;
 	}
 
+	get crossfadeDuration(): number {
+		return this._crossfadeDuration;
+	}
+
 	set crossfadeDuration(value: number) {
 		this._crossfadeDuration = value;
 	}
@@ -184,6 +188,42 @@ export class AudioManager extends Events {
 		this.fadeMultipliers.clear();
 		for (const [id] of this.tracks) {
 			this.stop(id);
+		}
+	}
+
+	fadeOutType(type: string, duration: number): void {
+		for (const [id, state] of this.tracks) {
+			if (state.def.type === type && state.playState === PlayState.Playing) {
+				const current = this.fadeMultipliers.get(id) ?? 1;
+				this.fades.start(id, current, 0, duration, (value) => {
+					this.fadeMultipliers.set(id, value);
+					this.applyVolume(id);
+				}).then(() => {
+					this.pause(id);
+					this.fadeMultipliers.delete(id);
+				}).catch((e) => {
+					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
+				});
+			}
+		}
+	}
+
+	fadeInType(type: string, duration: number): void {
+		for (const [id, state] of this.tracks) {
+			if (state.def.type === type && state.playState === PlayState.Paused) {
+				this.fadeMultipliers.set(id, 0);
+				this.applyVolume(id);
+				this.play(id).then(() => {
+					this.fades.start(id, 0, 1, duration, (value) => {
+						this.fadeMultipliers.set(id, value);
+						this.applyVolume(id);
+					}).catch((e) => {
+						console.error(`RPG Audio: fade-in failed for "${id}"`, e);
+					});
+				}).catch((e) => {
+					console.error(`RPG Audio: fade-in play failed for "${id}"`, e);
+				});
+			}
 		}
 	}
 

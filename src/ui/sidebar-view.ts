@@ -140,6 +140,24 @@ export class RpgAudioSidebarView extends ItemView {
 				text: String(tracks.length),
 			});
 
+			const fadeDuration = () => Math.max(this.manager.crossfadeDuration, 1000);
+
+			const fadeInBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn"});
+			setIcon(fadeInBtn, "volume-2");
+			fadeInBtn.setAttribute("aria-label", `Fade in ${type}`);
+			fadeInBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				this.manager.fadeInType(type, fadeDuration());
+			});
+
+			const fadeOutBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn"});
+			setIcon(fadeOutBtn, "volume-x");
+			fadeOutBtn.setAttribute("aria-label", `Fade out ${type}`);
+			fadeOutBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				this.manager.fadeOutType(type, fadeDuration());
+			});
+
 			sectionHeader.addEventListener("click", () => {
 				if (this.collapsedGroups.has(type)) {
 					this.collapsedGroups.delete(type);
