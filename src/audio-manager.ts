@@ -303,6 +303,8 @@ export class AudioManager extends Events {
 			this.applyVolume(id);
 		}).then(() => {
 			this.stop(id);
+		}).catch((e) => {
+			console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 		});
 	}
 
@@ -312,6 +314,8 @@ export class AudioManager extends Events {
 		this.fades.start(id, 0, 1, duration, (value) => {
 			this.fadeMultipliers.set(id, value);
 			this.applyVolume(id);
+		}).catch((e) => {
+			console.error(`RPG Audio: fade-in failed for "${id}"`, e);
 		});
 	}
 
