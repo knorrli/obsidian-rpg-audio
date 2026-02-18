@@ -126,11 +126,25 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		const initialVolume = currentState ? currentState.volume : 1.0;
 
 		this.controls = createPlayerControls(el, {
-			onPlay: () => void this.manager.play(this.def.id),
-			onPause: () => this.manager.pause(this.def.id),
-			onStop: () => this.manager.stop(this.def.id),
-			onVolumeChange: (v) => this.manager.setTrackVolume(this.def.id, v),
+			onPlay: () => { this.ensureActive(); void this.manager.play(this.def.id); },
+			onPause: () => { this.ensureActive(); this.manager.pause(this.def.id); },
+			onStop: () => { this.ensureActive(); this.manager.stop(this.def.id); },
+			onVolumeChange: (v) => { this.ensureActive(); this.manager.setTrackVolume(this.def.id, v); },
 		}, initialVolume);
+	}
+
+	/** Re-register track and event listener if orphaned (e.g. in embedded notes). */
+	private ensureActive(): void {
+		if (!this.manager.getTrack(this.def.id)) {
+			this.manager.register(this.def);
+		}
+		if (!this.eventRef) {
+			const handler = (changedId: string) => {
+				if (changedId === this.def.id) this.syncState();
+			};
+			this.manager.on(EVENT_TRACK_CHANGED, handler);
+			this.eventRef = () => this.manager.off(EVENT_TRACK_CHANGED, handler);
+		}
 	}
 
 	private syncState(): void {
