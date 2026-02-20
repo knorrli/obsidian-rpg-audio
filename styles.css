@@ -241,6 +241,11 @@
 	opacity: 1;
 }
 
+.rpg-audio-btn-disabled {
+	opacity: 0.3;
+	pointer-events: none;
+}
+
 .rpg-audio-sidebar-section-body {
 	padding-top: 4px;
 }

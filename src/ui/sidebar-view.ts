@@ -16,6 +16,8 @@ export class RpgAudioSidebarView extends ItemView {
 	private contentArea: HTMLElement | null = null;
 	private masterSlider: HTMLInputElement | null = null;
 	private collapsedGroups: Set<string> = new Set();
+	private globalFadeBtn: HTMLElement | null = null;
+	private typeFadeBtns: Map<string, HTMLElement> = new Map();
 
 	constructor(leaf: WorkspaceLeaf, manager: AudioManager) {
 		super(leaf);
@@ -48,7 +50,10 @@ export class RpgAudioSidebarView extends ItemView {
 			this.manager.on(EVENT_TRACKS_UPDATED, () => this.renderAll())
 		);
 		this.registerEvent(
-			this.manager.on(EVENT_TRACK_CHANGED, (id: string) => this.updateTrackRow(id))
+			this.manager.on(EVENT_TRACK_CHANGED, (id: string) => {
+				this.updateTrackRow(id);
+				this.updateFadeButtons();
+			})
 		);
 		this.registerEvent(
 			this.manager.on(EVENT_MASTER_VOLUME, (vol: number) => {
@@ -61,6 +66,8 @@ export class RpgAudioSidebarView extends ItemView {
 		this.trackRows.clear();
 		this.contentArea = null;
 		this.masterSlider = null;
+		this.globalFadeBtn = null;
+		this.typeFadeBtns.clear();
 	}
 
 	private buildHeader(container: HTMLElement): void {
@@ -73,15 +80,15 @@ export class RpgAudioSidebarView extends ItemView {
 
 		const globalControls = titleRow.createDiv({cls: "rpg-audio-global-controls"});
 
-		const fadeInAllBtn = globalControls.createEl("button", {cls: "rpg-audio-btn"});
-		setIcon(fadeInAllBtn, "volume-2");
-		fadeInAllBtn.setAttribute("aria-label", "Fade in all");
-		fadeInAllBtn.addEventListener("click", () => this.manager.fadeInAll(fadeDuration()));
-
-		const fadeOutAllBtn = globalControls.createEl("button", {cls: "rpg-audio-btn"});
-		setIcon(fadeOutAllBtn, "volume-x");
-		fadeOutAllBtn.setAttribute("aria-label", "Fade out all");
-		fadeOutAllBtn.addEventListener("click", () => this.manager.fadeOutAll(fadeDuration()));
+		this.globalFadeBtn = globalControls.createEl("button", {cls: "rpg-audio-btn"});
+		this.globalFadeBtn.addEventListener("click", () => {
+			if (this.hasPlayingTracks()) {
+				this.manager.fadeOutAll(fadeDuration());
+			} else {
+				this.manager.fadeInAll(fadeDuration());
+			}
+		});
+		this.updateFadeToggle(this.globalFadeBtn, this.hasPlayingTracks(), this.hasPausedTracks());
 
 		const stopAllBtn = globalControls.createEl("button", {cls: "rpg-audio-btn rpg-audio-stop-all-btn"});
 		setIcon(stopAllBtn, "square");
@@ -109,6 +116,7 @@ export class RpgAudioSidebarView extends ItemView {
 		if (!this.contentArea) return;
 		this.contentArea.empty();
 		this.trackRows.clear();
+		this.typeFadeBtns.clear();
 
 		const allTracks = this.manager.getAllTracks();
 
@@ -156,21 +164,17 @@ export class RpgAudioSidebarView extends ItemView {
 
 			const fadeDuration = () => Math.max(this.manager.crossfadeDuration, 1000);
 
-			const fadeInBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn"});
-			setIcon(fadeInBtn, "volume-2");
-			fadeInBtn.setAttribute("aria-label", `Fade in ${type}`);
-			fadeInBtn.addEventListener("click", (e) => {
+			const fadeToggleBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn"});
+			fadeToggleBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
-				this.manager.fadeInType(type, fadeDuration());
+				if (this.hasPlayingTracksOfType(type)) {
+					this.manager.fadeOutType(type, fadeDuration());
+				} else {
+					this.manager.fadeInType(type, fadeDuration());
+				}
 			});
-
-			const fadeOutBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn"});
-			setIcon(fadeOutBtn, "volume-x");
-			fadeOutBtn.setAttribute("aria-label", `Fade out ${type}`);
-			fadeOutBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				this.manager.fadeOutType(type, fadeDuration());
-			});
+			this.typeFadeBtns.set(type, fadeToggleBtn);
+			this.updateFadeToggle(fadeToggleBtn, this.hasPlayingTracksOfType(type), this.hasPausedTracksOfType(type));
 
 			sectionHeader.addEventListener("click", () => {
 				if (this.collapsedGroups.has(type)) {
@@ -218,6 +222,47 @@ export class RpgAudioSidebarView extends ItemView {
 		updatePlayPauseButton(row.controls.playPauseBtn, state.playState);
 		row.controls.volumeSlider.value = String(state.volume);
 		this.setStatusText(row.statusEl, state);
+	}
+
+	private hasPlayingTracks(): boolean {
+		return this.manager.getAllTracks().some(t => t.playState === PlayState.Playing);
+	}
+
+	private hasPausedTracks(): boolean {
+		return this.manager.getAllTracks().some(t => t.playState === PlayState.Paused);
+	}
+
+	private hasPlayingTracksOfType(type: string): boolean {
+		return this.manager.getAllTracks().some(t => t.def.type === type && t.playState === PlayState.Playing);
+	}
+
+	private hasPausedTracksOfType(type: string): boolean {
+		return this.manager.getAllTracks().some(t => t.def.type === type && t.playState === PlayState.Paused);
+	}
+
+	private updateFadeToggle(btn: HTMLElement, hasPlaying: boolean, hasPaused: boolean): void {
+		if (hasPlaying) {
+			setIcon(btn, "volume-x");
+			btn.setAttribute("aria-label", "Fade out");
+			btn.removeClass("rpg-audio-btn-disabled");
+		} else if (hasPaused) {
+			setIcon(btn, "volume-2");
+			btn.setAttribute("aria-label", "Fade in");
+			btn.removeClass("rpg-audio-btn-disabled");
+		} else {
+			setIcon(btn, "volume-x");
+			btn.setAttribute("aria-label", "Fade out");
+			btn.addClass("rpg-audio-btn-disabled");
+		}
+	}
+
+	private updateFadeButtons(): void {
+		if (this.globalFadeBtn) {
+			this.updateFadeToggle(this.globalFadeBtn, this.hasPlayingTracks(), this.hasPausedTracks());
+		}
+		for (const [type, btn] of this.typeFadeBtns) {
+			this.updateFadeToggle(btn, this.hasPlayingTracksOfType(type), this.hasPausedTracksOfType(type));
+		}
 	}
 
 	private setStatusText(el: HTMLElement, state: AudioTrackState): void {
