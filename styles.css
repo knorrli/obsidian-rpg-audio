@@ -254,6 +254,12 @@
 	padding: 4px 8px;
 	border-radius: 6px;
 	margin-bottom: 2px;
+	border-left: 3px solid transparent;
+}
+
+.rpg-audio-sidebar-track.is-paused {
+	opacity: 0.5;
+	border-left-color: var(--text-accent);
 }
 
 .rpg-audio-sidebar-track:hover {

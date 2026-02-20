@@ -12,7 +12,7 @@ import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} fro
 
 export class RpgAudioSidebarView extends ItemView {
 	private manager: AudioManager;
-	private trackRows: Map<string, {controls: PlayerControlsElements; statusEl: HTMLElement}> = new Map();
+	private trackRows: Map<string, {rowEl: HTMLElement; controls: PlayerControlsElements; statusEl: HTMLElement}> = new Map();
 	private contentArea: HTMLElement | null = null;
 	private masterSlider: HTMLInputElement | null = null;
 	private collapsedGroups: Set<string> = new Set();
@@ -196,6 +196,7 @@ export class RpgAudioSidebarView extends ItemView {
 
 	private buildTrackRow(parent: HTMLElement, track: AudioTrackState): void {
 		const row = parent.createDiv({cls: "rpg-audio-sidebar-track"});
+		if (track.playState === PlayState.Paused) row.addClass("is-paused");
 		const topRow = row.createDiv({cls: "rpg-audio-sidebar-track-top"});
 		topRow.createDiv({cls: "rpg-audio-sidebar-track-name", text: track.def.name});
 
@@ -211,7 +212,7 @@ export class RpgAudioSidebarView extends ItemView {
 		const statusEl = row.createDiv({cls: "rpg-audio-status"});
 		this.setStatusText(statusEl, track);
 
-		this.trackRows.set(track.def.id, {controls, statusEl});
+		this.trackRows.set(track.def.id, {rowEl: row, controls, statusEl});
 	}
 
 	private updateTrackRow(id: string): void {
@@ -219,6 +220,7 @@ export class RpgAudioSidebarView extends ItemView {
 		const state = this.manager.getTrack(id);
 		if (!row || !state) return;
 
+		row.rowEl.toggleClass("is-paused", state.playState === PlayState.Paused);
 		updatePlayPauseButton(row.controls.playPauseBtn, state.playState);
 		row.controls.volumeSlider.value = String(state.volume);
 		this.setStatusText(row.statusEl, state);
