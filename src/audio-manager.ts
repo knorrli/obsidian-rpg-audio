@@ -14,6 +14,7 @@ export class AudioManager extends Events {
 	private tracks: Map<string, AudioTrackState> = new Map();
 	private audioElements: Map<string, HTMLAudioElement> = new Map();
 	private orphanTimers: Map<string, number> = new Map();
+	private pendingOrphans: Set<string> = new Set();
 	private _masterVolume = 1.0;
 	private _audioFolder = "";
 	private fades = new FadeEngine();
@@ -59,6 +60,7 @@ export class AudioManager extends Events {
 
 	register(def: AudioTrackDef): void {
 		this.clearOrphanTimer(def.id);
+		this.pendingOrphans.delete(def.id);
 
 		const existing = this.tracks.get(def.id);
 		if (existing) {
@@ -78,6 +80,7 @@ export class AudioManager extends Events {
 	}
 
 	unregister(id: string): void {
+		this.pendingOrphans.delete(id);
 		this.fades.cancel(id);
 		this.fadeMultipliers.delete(id);
 		this.stop(id);
@@ -162,6 +165,7 @@ export class AudioManager extends Events {
 
 		state.playState = PlayState.Paused;
 		this.trigger(EVENT_TRACK_CHANGED, id);
+		this.cleanupIfOrphaned(id);
 	}
 
 	stop(id: string): void {
@@ -181,6 +185,7 @@ export class AudioManager extends Events {
 		state.currentIndex = 0;
 		state.error = null;
 		this.trigger(EVENT_TRACK_CHANGED, id);
+		this.cleanupIfOrphaned(id);
 	}
 
 	stopAll(): void {
@@ -278,10 +283,19 @@ export class AudioManager extends Events {
 			this.orphanTimers.delete(id);
 			const state = this.tracks.get(id);
 			if (!state) return;
-			if (state.playState === PlayState.Playing) return;
+			if (state.playState === PlayState.Playing) {
+				this.pendingOrphans.add(id);
+				return;
+			}
 			this.unregister(id);
 		}, 2000);
 		this.orphanTimers.set(id, timer);
+	}
+
+	private cleanupIfOrphaned(id: string): void {
+		if (this.pendingOrphans.has(id)) {
+			this.unregister(id);
+		}
 	}
 
 	private clearOrphanTimer(id: string): void {
@@ -295,6 +309,7 @@ export class AudioManager extends Events {
 	destroyAll(): void {
 		this.fades.destroy();
 		this.fadeMultipliers.clear();
+		this.pendingOrphans.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
 		}
@@ -332,10 +347,12 @@ export class AudioManager extends Events {
 					state.playState = PlayState.Stopped;
 					state.currentIndex = 0;
 					this.trigger(EVENT_TRACK_CHANGED, id);
+					this.cleanupIfOrphaned(id);
 				}
 			} else {
 				state.playState = PlayState.Stopped;
 				this.trigger(EVENT_TRACK_CHANGED, id);
+				this.cleanupIfOrphaned(id);
 			}
 		});
 	}
