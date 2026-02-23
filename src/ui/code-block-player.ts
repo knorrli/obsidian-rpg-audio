@@ -10,7 +10,6 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 	let name = "";
 	let type = "";
 	let loop = false;
-	let loopExplicit = false;
 	let random = false;
 	let stops: string[] = [];
 	const files: string[] = [];
@@ -44,7 +43,6 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 				break;
 			case "loop":
 				loop = value === "true";
-				loopExplicit = true;
 				break;
 			case "random":
 				random = value === "true";
@@ -148,6 +146,10 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 		updatePlayPauseButton(this.controls.playPauseBtn, state.playState);
 		this.controls.volumeSlider.value = String(state.volume);
+
+		this.containerEl.toggleClass("is-playing", state.playState === PlayState.Playing);
+		this.containerEl.toggleClass("is-paused", state.playState === PlayState.Paused);
+		this.containerEl.toggleClass("is-stopped", state.playState === PlayState.Stopped);
 
 		let statusText = "";
 		if (state.error) {

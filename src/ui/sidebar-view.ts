@@ -196,7 +196,7 @@ export class RpgAudioSidebarView extends ItemView {
 
 	private buildTrackRow(parent: HTMLElement, track: AudioTrackState): void {
 		const row = parent.createDiv({cls: "rpg-audio-sidebar-track"});
-		if (track.playState === PlayState.Paused) row.addClass("is-paused");
+		this.applyPlayStateClass(row, track.playState);
 		const topRow = row.createDiv({cls: "rpg-audio-sidebar-track-top"});
 		topRow.createDiv({cls: "rpg-audio-sidebar-track-name", text: track.def.name});
 
@@ -220,7 +220,7 @@ export class RpgAudioSidebarView extends ItemView {
 		const state = this.manager.getTrack(id);
 		if (!row || !state) return;
 
-		row.rowEl.toggleClass("is-paused", state.playState === PlayState.Paused);
+		this.applyPlayStateClass(row.rowEl, state.playState);
 		updatePlayPauseButton(row.controls.playPauseBtn, state.playState);
 		row.controls.volumeSlider.value = String(state.volume);
 		this.setStatusText(row.statusEl, state);
@@ -267,6 +267,12 @@ export class RpgAudioSidebarView extends ItemView {
 		}
 	}
 
+	private applyPlayStateClass(el: HTMLElement, playState: PlayState): void {
+		el.toggleClass("is-playing", playState === PlayState.Playing);
+		el.toggleClass("is-paused", playState === PlayState.Paused);
+		el.toggleClass("is-stopped", playState === PlayState.Stopped);
+	}
+
 	private setStatusText(el: HTMLElement, state: AudioTrackState): void {
 		let text = "";
 		if (state.error) {
@@ -274,13 +280,8 @@ export class RpgAudioSidebarView extends ItemView {
 			el.addClass("rpg-audio-error-text");
 		} else {
 			el.removeClass("rpg-audio-error-text");
-			if (state.playState === PlayState.Playing) {
-				text = "Playing";
-				if (state.def.files.length > 1) {
-					text += ` (${state.currentIndex + 1}/${state.def.files.length})`;
-				}
-			} else if (state.playState === PlayState.Paused) {
-				text = "Paused";
+			if (state.playState === PlayState.Playing && state.def.files.length > 1) {
+				text = `${state.currentIndex + 1}/${state.def.files.length}`;
 			}
 		}
 		el.setText(text);
