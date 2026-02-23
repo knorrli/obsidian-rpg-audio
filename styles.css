@@ -10,6 +10,20 @@
 	padding: 4px 8px;
 	margin: 4px 0;
 	background: var(--background-secondary);
+	border-left: 3px solid transparent;
+}
+
+.rpg-audio-player.is-playing {
+	border-left-color: var(--color-green);
+}
+
+.rpg-audio-player.is-paused {
+	border-left-color: var(--color-yellow);
+	opacity: 0.6;
+}
+
+.rpg-audio-player.is-stopped {
+	opacity: 0.7;
 }
 
 .rpg-audio-header {
@@ -254,10 +268,20 @@
 	padding: 4px 8px;
 	border-radius: 6px;
 	margin-bottom: 2px;
+	border-left: 3px solid transparent;
+}
+
+.rpg-audio-sidebar-track.is-playing {
+	border-left-color: var(--color-green);
 }
 
 .rpg-audio-sidebar-track.is-paused {
-	opacity: 0.5;
+	border-left-color: var(--color-yellow);
+	opacity: 0.6;
+}
+
+.rpg-audio-sidebar-track.is-stopped {
+	opacity: 0.7;
 }
 
 .rpg-audio-sidebar-track:hover {

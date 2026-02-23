@@ -149,6 +149,10 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		updatePlayPauseButton(this.controls.playPauseBtn, state.playState);
 		this.controls.volumeSlider.value = String(state.volume);
 
+		this.containerEl.toggleClass("is-playing", state.playState === PlayState.Playing);
+		this.containerEl.toggleClass("is-paused", state.playState === PlayState.Paused);
+		this.containerEl.toggleClass("is-stopped", state.playState === PlayState.Stopped);
+
 		let statusText = "";
 		if (state.error) {
 			statusText = state.error;
