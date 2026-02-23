@@ -10,7 +10,6 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 	let name = "";
 	let type = "";
 	let loop = false;
-	let loopExplicit = false;
 	let random = false;
 	let stops: string[] = [];
 	const files: string[] = [];
@@ -44,7 +43,6 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 				break;
 			case "loop":
 				loop = value === "true";
-				loopExplicit = true;
 				break;
 			case "random":
 				random = value === "true";
