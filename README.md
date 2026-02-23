@@ -58,7 +58,8 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `id`    | Yes      | Unique identifier for the track. Used internally to manage playback state. |
 | `name`  | Yes      | Display name shown in the player widget and sidebar. |
 | `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
-| `loop`  | No       | `true` or `false`. Whether the track loops after finishing. Defaults to `true` for multi-file tracks, `false` for single-file tracks. |
+| `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `true` for multi-file tracks, `false` for single-file tracks. |
+| `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
 | `stops`     | No   | Comma-separated list of types to stop when this track starts playing (e.g. `music, ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
 | `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
 | `files` | \*       | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
@@ -104,7 +105,42 @@ files:
 ```
 ````
 
-Multi-file tracks loop by default. Set `loop: false` to stop after the last file.
+Multi-file tracks loop by default and play through all tracks in order. Set `loop: false` to play a single track and stop.
+
+**Shuffled playlist:**
+
+````markdown
+```rpg-audio
+id: battle-music
+name: Battle Music
+type: playlist
+random: true
+files:
+- audio/music/battle-01.mp3
+- audio/music/battle-02.mp3
+- audio/music/battle-03.mp3
+```
+````
+
+With `random: true`, playback starts on a random track and shuffles to a different track each time one ends. Resuming from pause keeps the current track.
+
+**Randomized sound effect (one-shot):**
+
+````markdown
+```rpg-audio
+id: sword-hit
+name: Sword Hit
+type: sfx
+random: true
+loop: false
+files:
+- audio/sfx/sword-hit-01.mp3
+- audio/sfx/sword-hit-02.mp3
+- audio/sfx/sword-hit-03.mp3
+```
+````
+
+With `random: true` and `loop: false`, each press of play triggers a random sound from the list. Great for varied sound effects.
 
 **Music tracks that stop other music (only one plays at a time):**
 
@@ -160,7 +196,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 - **Desktop only** — no mobile/tablet support
 - **Local files only** — plays audio from your vault, not streaming services or URLs
 - **No seek/scrubber** — play, pause, and stop only; no jumping to a specific timestamp
-- **No shuffle** — playlists always play in listed order
+- **No weighted random** — `random: true` gives each track equal probability; no way to bias towards specific tracks
 - **No persistent state** — playback resets when Obsidian restarts
 - **Supported formats** — depends on Electron's audio engine; MP3, OGG, WAV, FLAC, and AAC generally work
 

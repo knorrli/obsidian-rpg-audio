@@ -115,6 +115,10 @@ export class AudioManager extends Events {
 
 		const shouldFadeIn = crossfading;
 
+		if (state.def.random && state.def.files.length > 1 && state.playState !== PlayState.Paused) {
+			state.currentIndex = Math.floor(Math.random() * state.def.files.length);
+		}
+
 		const fileIndex = state.currentIndex;
 		const filePath = state.def.files[fileIndex];
 		if (!filePath) return;
@@ -335,22 +339,20 @@ export class AudioManager extends Events {
 			const state = this.tracks.get(id);
 			if (!state) return;
 
-			if (state.def.files.length > 1) {
-				const nextIndex = state.currentIndex + 1;
-				if (nextIndex < state.def.files.length) {
-					state.currentIndex = nextIndex;
-					void this.playCurrentIndex(id);
-				} else if (state.def.loop) {
-					state.currentIndex = 0;
-					void this.playCurrentIndex(id);
+			if (state.def.files.length > 1 && state.def.loop) {
+				if (state.def.random) {
+					let next = Math.floor(Math.random() * state.def.files.length);
+					if (state.def.files.length > 1 && next === state.currentIndex) {
+						next = (next + 1) % state.def.files.length;
+					}
+					state.currentIndex = next;
 				} else {
-					state.playState = PlayState.Stopped;
-					state.currentIndex = 0;
-					this.trigger(EVENT_TRACK_CHANGED, id);
-					this.cleanupIfOrphaned(id);
+					state.currentIndex = (state.currentIndex + 1) % state.def.files.length;
 				}
+				void this.playCurrentIndex(id);
 			} else {
 				state.playState = PlayState.Stopped;
+				state.currentIndex = 0;
 				this.trigger(EVENT_TRACK_CHANGED, id);
 				this.cleanupIfOrphaned(id);
 			}
