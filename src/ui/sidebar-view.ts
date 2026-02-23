@@ -141,6 +141,8 @@ export class RpgAudioSidebarView extends ItemView {
 			group.push(track);
 		}
 
+		groupOrder.sort((a, b) => a.localeCompare(b));
+
 		for (const type of groupOrder) {
 			const tracks = groupMap.get(type);
 			if (!tracks || tracks.length === 0) continue;
