@@ -10,6 +10,7 @@ export interface AudioTrackDef {
 	type: string;
 	files: string[];
 	loop: boolean;
+	random: boolean;
 	stops: string[];
 }
 
