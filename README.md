@@ -58,7 +58,7 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `id`    | Yes      | Unique identifier for the track. Used internally to manage playback state. |
 | `name`  | Yes      | Display name shown in the player widget and sidebar. |
 | `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
-| `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `true` for multi-file tracks, `false` for single-file tracks. |
+| `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
 | `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
 | `stops`     | No   | Comma-separated list of types to stop when this track starts playing (e.g. `music, ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
 | `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
@@ -98,6 +98,7 @@ file: audio/ambience/rain.mp3
 id: battle-music
 name: Battle Music
 type: playlist
+loop: true
 files:
 - audio/music/battle-01.mp3
 - audio/music/battle-02.mp3
@@ -105,7 +106,7 @@ files:
 ```
 ````
 
-Multi-file tracks loop by default and play through all tracks in order. Set `loop: false` to play a single track and stop.
+Add `loop: true` to play through all tracks in order and repeat. Without it, only one track plays and stops.
 
 **Shuffled playlist:**
 
@@ -114,6 +115,7 @@ Multi-file tracks loop by default and play through all tracks in order. Set `loo
 id: battle-music
 name: Battle Music
 type: playlist
+loop: true
 random: true
 files:
 - audio/music/battle-01.mp3

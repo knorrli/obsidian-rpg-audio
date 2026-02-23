@@ -66,7 +66,6 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 	if (!id || !name || files.length === 0) return null;
 
 	if (!type) type = files.length > 1 ? "playlist" : "sfx";
-	if (!loopExplicit && files.length > 1) loop = true;
 
 	return {id, name, type, files, loop, random, stops};
 }
