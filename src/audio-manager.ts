@@ -420,25 +420,19 @@ export class AudioManager extends Events {
 	}
 
 	private fadeOutAndPause(id: string, duration: number): void {
-		const current = this.fadeMultipliers.get(id) ?? 1;
-		this.fades.start(id, current, 0, duration, (value) => {
-			this.fadeMultipliers.set(id, value);
-			this.applyVolume(id);
-		}).then(() => {
-			this.pause(id);
-		}).catch((e) => {
-			console.error(`RPG Audio: fade-out failed for "${id}"`, e);
-		});
+		this.fadeOutThen(id, duration, () => this.pause(id));
 	}
 
 	private fadeOutAndStop(id: string, duration: number): void {
+		this.fadeOutThen(id, duration, () => this.stop(id));
+	}
+
+	private fadeOutThen(id: string, duration: number, onComplete: () => void): void {
 		const current = this.fadeMultipliers.get(id) ?? 1;
 		this.fades.start(id, current, 0, duration, (value) => {
 			this.fadeMultipliers.set(id, value);
 			this.applyVolume(id);
-		}).then(() => {
-			this.stop(id);
-		}).catch((e) => {
+		}).then(onComplete).catch((e) => {
 			console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 		});
 	}
