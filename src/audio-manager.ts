@@ -113,6 +113,18 @@ export class AudioManager extends Events {
 			}
 		}
 
+		if (state.def.pauses.length > 0) {
+			for (const [otherId, other] of this.tracks) {
+				if (otherId !== id && state.def.pauses.includes(other.def.type) && other.playState === PlayState.Playing) {
+					if (this._crossfadeDuration > 0) {
+						this.fadeOutAndPause(otherId, this._crossfadeDuration);
+					} else {
+						this.pause(otherId);
+					}
+				}
+			}
+		}
+
 		if (state.def.starts.length > 0) {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && state.def.starts.includes(other.def.type) && other.playState === PlayState.Paused) {
@@ -405,6 +417,18 @@ export class AudioManager extends Events {
 			state.playState = PlayState.Stopped;
 		}
 		this.trigger(EVENT_TRACK_CHANGED, id);
+	}
+
+	private fadeOutAndPause(id: string, duration: number): void {
+		const current = this.fadeMultipliers.get(id) ?? 1;
+		this.fades.start(id, current, 0, duration, (value) => {
+			this.fadeMultipliers.set(id, value);
+			this.applyVolume(id);
+		}).then(() => {
+			this.pause(id);
+		}).catch((e) => {
+			console.error(`RPG Audio: fade-out failed for "${id}"`, e);
+		});
 	}
 
 	private fadeOutAndStop(id: string, duration: number): void {
