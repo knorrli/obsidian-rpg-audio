@@ -9,7 +9,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 
 - **Inline players** — add `rpg-audio` code blocks to any note and get play/pause, stop, and volume controls right next to your encounter text
 - **Sidebar** — a dedicated panel showing all tracks grouped by type, with global and per-group fade controls
-- **Crossfade** — tracks with `stops:` automatically crossfade between each other (configurable duration, or instant)
+- **Crossfade** — tracks with `stops:`, `pauses:`, or `starts:` automatically crossfade between each other (configurable duration, or instant)
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
@@ -18,7 +18,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 
 - **GMs who prep in Obsidian** — embed audio controls right next to your encounter notes. When the party enters the tavern, hit play without alt-tabbing.
 - **Layered soundscapes** — run rain ambience, tavern chatter, and a bard's tune simultaneously, each with its own volume.
-- **One-click scene transitions** — use `stops:` to crossfade from exploration music to battle music with a single button press.
+- **One-click scene transitions** — use `stops:` to crossfade from exploration music to battle music with a single button press. Use `pauses:` and `starts:` for temporary transitions that resume where they left off.
 - **Solo RPG / journaling** — set the mood for your solo sessions.
 
 ## Quick start
@@ -61,6 +61,8 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
 | `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
 | `stops`     | No   | Comma-separated list of types to stop when this track starts playing (e.g. `music, ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
+| `pauses`    | No   | Comma-separated list of types to pause when this track starts playing (e.g. `ambience`). Like `stops`, but paused tracks keep their position and can be resumed later. Fades out if crossfade is configured. |
+| `starts`    | No   | Comma-separated list of types to resume when this track starts playing (e.g. `ambience`). Resumes tracks that were previously paused. Fades in if crossfade is configured. |
 | `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
 | `files` | \*       | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
 
@@ -159,6 +161,40 @@ file: audio/music/tavern.mp3
 
 With `stops: music`, starting this track will automatically stop any other playing track that has `type: music`. You can list multiple types separated by commas (e.g. `stops: music, ambience`). If a crossfade duration is configured in settings, the outgoing tracks fade out while the new one fades in.
 
+**Scene transitions with pause/resume:**
+
+````markdown
+```rpg-audio
+id: outside-ambience
+name: Outside Ambience
+type: ambience
+loop: true
+file: audio/ambience/forest.mp3
+```
+````
+
+````markdown
+```rpg-audio
+id: enter-house
+name: Enter House
+type: sfx
+pauses: ambience
+file: audio/sfx/door-open.mp3
+```
+````
+
+````markdown
+```rpg-audio
+id: exit-house
+name: Exit House
+type: sfx
+starts: ambience
+file: audio/sfx/door-close.mp3
+```
+````
+
+Play "Outside Ambience", then hit "Enter House" — the ambience pauses (with fade-out if crossfade is on). Later, hit "Exit House" and the ambience picks up right where it left off (with fade-in).
+
 ## Sidebar
 
 Click the music note icon in the ribbon (or run the **Toggle audio sidebar** command) to open a sidebar panel. The sidebar shows:
@@ -173,6 +209,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 ## Tips
 
 - Use `stops: music` on all your music tracks so only one plays at a time — switching scenes is a single click
+- Use `pauses:` and `starts:` for temporary scene changes (e.g. entering/leaving a building) where you want audio to resume from where it left off
 - Keep ambience and SFX as separate types so you can fade out ambience without killing sound effects
 - Organize your audio folder by type: `audio/music/`, `audio/ambience/`, `audio/sfx/`
 - File paths can be absolute from the vault root (`audio/music/tavern.mp3`) or relative to the configured audio folder (`music/tavern.mp3`)
