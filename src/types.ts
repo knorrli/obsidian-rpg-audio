@@ -12,6 +12,7 @@ export interface AudioTrackDef {
 	loop: boolean;
 	random: boolean;
 	stops: string[];
+	starts: string[];
 }
 
 export interface AudioTrackState {

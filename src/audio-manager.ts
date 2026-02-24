@@ -113,6 +113,22 @@ export class AudioManager extends Events {
 			}
 		}
 
+		if (state.def.starts.length > 0) {
+			for (const [otherId, other] of this.tracks) {
+				if (otherId !== id && state.def.starts.includes(other.def.type) && other.playState === PlayState.Paused) {
+					if (this._crossfadeDuration > 0) {
+						this.play(otherId).then(() => {
+							this.fadeIn(otherId, this._crossfadeDuration);
+						}).catch((e) => {
+							console.error(`RPG Audio: starts fade-in failed for "${otherId}"`, e);
+						});
+					} else {
+						void this.play(otherId);
+					}
+				}
+			}
+		}
+
 		const shouldFadeIn = crossfading;
 
 		if (state.def.random && state.def.files.length > 1 && state.playState !== PlayState.Paused) {
