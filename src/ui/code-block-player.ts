@@ -1,6 +1,6 @@
 import {MarkdownRenderChild, setIcon} from "obsidian";
 import {AudioManager} from "../audio-manager";
-import {AudioTrackDef, PlayState, EVENT_TRACK_CHANGED} from "../types";
+import {AudioTrackDef, PlayState, EVENT_TRACK_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
 import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
 
 export function parseAudioBlock(source: string): AudioTrackDef | null {
@@ -104,6 +104,12 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.eventRef = () => this.manager.off(EVENT_TRACK_CHANGED, handler);
 
 		this.syncState();
+
+		// Obsidian does not call onunload for MarkdownRenderChild inside
+		// ![[...]] transclusions. Poll for DOM detachment as a fallback.
+		this.registerInterval(window.setInterval(() => {
+			if (!this.containerEl.isConnected) this.unload();
+		}, DETACH_POLL_INTERVAL_MS));
 	}
 
 	onunload(): void {

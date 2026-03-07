@@ -7,6 +7,7 @@ import {
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
 	AudioTrackState,
+	MIN_FADE_DURATION_MS,
 } from "../types";
 import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
 
@@ -76,7 +77,7 @@ export class RpgAudioSidebarView extends ItemView {
 		const titleRow = header.createDiv({cls: "rpg-audio-sidebar-title-row"});
 		titleRow.createSpan({cls: "rpg-audio-sidebar-title", text: "RPG Audio"});
 
-		const fadeDuration = () => Math.max(this.manager.crossfadeDuration, 1000);
+		const fadeDuration = () => Math.max(this.manager.crossfadeDuration, MIN_FADE_DURATION_MS);
 
 		const globalControls = titleRow.createDiv({cls: "rpg-audio-global-controls"});
 
@@ -164,7 +165,7 @@ export class RpgAudioSidebarView extends ItemView {
 				text: String(tracks.length),
 			});
 
-			const fadeDuration = () => Math.max(this.manager.crossfadeDuration, 1000);
+			const fadeDuration = () => Math.max(this.manager.crossfadeDuration, MIN_FADE_DURATION_MS);
 
 			const fadeToggleBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn"});
 			fadeToggleBtn.addEventListener("click", (e) => {

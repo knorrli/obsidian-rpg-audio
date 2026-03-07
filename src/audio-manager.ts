@@ -6,6 +6,7 @@ import {
 	EVENT_TRACK_CHANGED,
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
+	ORPHAN_CHECK_DELAY_MS,
 } from "./types";
 import { FadeEngine } from "./fade-engine";
 
@@ -319,7 +320,7 @@ export class AudioManager extends Events {
 				return;
 			}
 			this.unregister(id);
-		}, 2000);
+		}, ORPHAN_CHECK_DELAY_MS);
 		this.orphanTimers.set(id, timer);
 	}
 
