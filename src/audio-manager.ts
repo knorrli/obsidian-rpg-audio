@@ -197,7 +197,6 @@ export class AudioManager extends Events {
 
 		state.playState = PlayState.Paused;
 		this.trigger(EVENT_TRACK_CHANGED, id);
-		this.cleanupIfOrphaned(id);
 	}
 
 	stop(id: string): void {
@@ -315,7 +314,7 @@ export class AudioManager extends Events {
 			this.orphanTimers.delete(id);
 			const state = this.tracks.get(id);
 			if (!state) return;
-			if (state.playState === PlayState.Playing) {
+			if (state.playState === PlayState.Playing || state.playState === PlayState.Paused) {
 				this.pendingOrphans.add(id);
 				return;
 			}
