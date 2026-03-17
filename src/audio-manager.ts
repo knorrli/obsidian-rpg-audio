@@ -34,7 +34,7 @@ export class AudioManager extends Events {
 			this.audioContext = new AudioContext();
 		}
 		if (this.audioContext.state === "suspended") {
-			this.audioContext.resume();
+			this.audioContext.resume().catch(() => {});
 		}
 		return this.audioContext;
 	}
@@ -388,7 +388,7 @@ export class AudioManager extends Events {
 		}
 		this.gainNodes.clear();
 		if (this.audioContext) {
-			this.audioContext.close();
+			this.audioContext.close().catch(() => {});
 			this.audioContext = null;
 		}
 		this.tracks.clear();
