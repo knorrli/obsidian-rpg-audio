@@ -111,6 +111,7 @@
 	background: var(--background-modifier-border);
 	border-radius: 2px;
 	outline: none;
+	touch-action: pan-x;
 }
 
 .rpg-audio-volume::-webkit-slider-thumb {
