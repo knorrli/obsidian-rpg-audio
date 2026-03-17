@@ -14,6 +14,8 @@ export class AudioManager extends Events {
 	private app: App;
 	private tracks: Map<string, AudioTrackState> = new Map();
 	private audioElements: Map<string, HTMLAudioElement> = new Map();
+	private gainNodes: Map<string, GainNode> = new Map();
+	private audioContext: AudioContext | null = null;
 	private orphanTimers: Map<string, number> = new Map();
 	private pendingOrphans: Set<string> = new Set();
 	private _masterVolume = 1.0;
@@ -25,6 +27,29 @@ export class AudioManager extends Events {
 	constructor(app: App) {
 		super();
 		this.app = app;
+	}
+
+	private ensureAudioContext(): AudioContext {
+		if (!this.audioContext) {
+			this.audioContext = new AudioContext();
+		}
+		if (this.audioContext.state === "suspended") {
+			this.audioContext.resume();
+		}
+		return this.audioContext;
+	}
+
+	private getOrCreateGainNode(id: string, el: HTMLAudioElement): GainNode {
+		let gain = this.gainNodes.get(id);
+		if (gain) return gain;
+
+		const ctx = this.ensureAudioContext();
+		const source = ctx.createMediaElementSource(el);
+		gain = ctx.createGain();
+		source.connect(gain);
+		gain.connect(ctx.destination);
+		this.gainNodes.set(id, gain);
+		return gain;
 	}
 
 	set audioFolder(value: string) {
@@ -91,6 +116,11 @@ export class AudioManager extends Events {
 			el.removeAttribute("src");
 			el.load();
 			this.audioElements.delete(id);
+		}
+		const gain = this.gainNodes.get(id);
+		if (gain) {
+			gain.disconnect();
+			this.gainNodes.delete(id);
 		}
 		this.tracks.delete(id);
 		this.trigger(EVENT_TRACKS_UPDATED);
@@ -164,6 +194,7 @@ export class AudioManager extends Events {
 		if (!el) {
 			el = new Audio();
 			this.audioElements.set(id, el);
+			this.getOrCreateGainNode(id, el);
 			this.setupAudioElement(id, el);
 		}
 
@@ -352,14 +383,22 @@ export class AudioManager extends Events {
 			el.load();
 		}
 		this.audioElements.clear();
+		for (const [, gain] of this.gainNodes) {
+			gain.disconnect();
+		}
+		this.gainNodes.clear();
+		if (this.audioContext) {
+			this.audioContext.close();
+			this.audioContext = null;
+		}
 		this.tracks.clear();
 	}
 
 	private applyVolume(id: string): void {
 		const state = this.tracks.get(id);
-		const el = this.audioElements.get(id);
-		if (!state || !el) return;
-		el.volume = state.volume * this._masterVolume * (this.fadeMultipliers.get(id) ?? 1);
+		const gain = this.gainNodes.get(id);
+		if (!state || !gain) return;
+		gain.gain.value = state.volume * this._masterVolume * (this.fadeMultipliers.get(id) ?? 1);
 	}
 
 	private setupAudioElement(id: string, el: HTMLAudioElement): void {
