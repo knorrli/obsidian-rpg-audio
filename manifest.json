@@ -6,5 +6,5 @@
 	"description": "Play audio tracks (one-shots, loops, playlists) for tabletop RPG sessions directly from your notes.",
 	"author": "Knorrli",
 	"authorUrl": "https://github.com/knorrli/obsidian-rpg-audio",
-	"isDesktopOnly": true
+	"isDesktopOnly": false
 }
