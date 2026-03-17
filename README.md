@@ -13,6 +13,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
+- **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax. Pick files from a fuzzy search, set type/loop/random, and insert the block at your cursor
 
 ## Use cases
 
@@ -225,6 +226,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 
 - **Toggle audio sidebar** — show or hide the audio sidebar panel.
 - **Stop all audio** — stop all currently playing tracks.
+- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor. Lets you set the name, type, files (via fuzzy search), loop, random, and advanced options (stops/pauses/starts) through a form instead of writing YAML by hand.
 
 ## Caveats
 
