@@ -309,3 +309,87 @@
 	padding: 24px 12px;
 	font-style: italic;
 }
+
+/* Insert track modal */
+.rpg-audio-insert-modal {
+	padding: 12px;
+}
+
+.rpg-audio-insert-modal h2 {
+	margin-top: 0;
+	margin-bottom: 12px;
+}
+
+.rpg-audio-insert-advanced-summary {
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 0.85em;
+	padding: 8px 0;
+	user-select: none;
+}
+
+.rpg-audio-file-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	width: 100%;
+	margin-top: 6px;
+}
+
+.rpg-audio-file-chip {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border-radius: 6px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	font-size: 0.85em;
+}
+
+.rpg-audio-file-chip-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rpg-audio-file-chip-remove {
+	flex-shrink: 0;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	border-radius: 4px;
+	font-size: 1.1em;
+	padding: 0;
+}
+
+.rpg-audio-file-chip-remove:hover {
+	color: var(--text-error);
+	background: var(--background-modifier-hover);
+}
+
+.rpg-audio-custom-type {
+	margin-top: 6px;
+}
+
+.rpg-audio-custom-type.is-hidden {
+	display: none;
+}
+
+.rpg-audio-custom-type-input {
+	width: 100%;
+}
+
+.rpg-audio-insert-btn-row {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: 12px;
+}

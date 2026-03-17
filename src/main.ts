@@ -4,6 +4,7 @@ import { AudioManager } from "./audio-manager";
 import { SIDEBAR_VIEW_TYPE } from "./types";
 import { parseAudioBlock, RpgAudioCodeBlockPlayer } from "./ui/code-block-player";
 import { RpgAudioSidebarView } from "./ui/sidebar-view";
+import { InsertTrackModal } from "./ui/insert-track-modal";
 
 export default class RpgAudioPlugin extends Plugin {
 	settings: RpgAudioSettings;
@@ -44,6 +45,16 @@ export default class RpgAudioPlugin extends Plugin {
 			id: "stop-all",
 			name: "Stop all audio",
 			callback: () => this.audioManager.stopAll(),
+		});
+
+		this.addCommand({
+			id: "insert-track",
+			name: "Insert audio track",
+			editorCallback: (editor) => {
+				new InsertTrackModal(this.app, this.settings.audioFolder, (codeBlock) => {
+					editor.replaceRange(codeBlock + "\n", editor.getCursor());
+				}).open();
+			},
 		});
 
 		this.addSettingTab(new RpgAudioSettingTab(this.app, this));
