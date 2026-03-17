@@ -22,10 +22,10 @@ export function createPlayerControls(
 ): PlayerControlsElements {
 	const container = parent.createDiv({cls: "rpg-audio-controls"});
 
-	const playPauseBtn = container.createEl("button", {cls: "rpg-audio-btn rpg-audio-play-btn"});
+	const playPauseBtn = container.createEl("button", {cls: "rpg-audio-btn rpg-audio-play-btn clickable-icon"});
 	setIcon(playPauseBtn, "play");
 
-	const stopBtn = container.createEl("button", {cls: "rpg-audio-btn rpg-audio-stop-btn"});
+	const stopBtn = container.createEl("button", {cls: "rpg-audio-btn rpg-audio-stop-btn clickable-icon"});
 	setIcon(stopBtn, "square");
 
 	const volumeSlider = container.createEl("input", {

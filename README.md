@@ -232,7 +232,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 
 ## Limitations
 
-- **Desktop only** — no mobile/tablet support
+- **Mobile/tablet volume sliders** — on mobile and tablet, dragging volume sliders in editing mode may conflict with Obsidian's swipe-to-open-sidebar gesture. Switch to reading mode for smoother slider control.
 - **Local files only** — plays audio from your vault, not streaming services or URLs
 - **No seek/scrubber** — play, pause, and stop only; no jumping to a specific timestamp
 - **No weighted random** — `random: true` gives each track equal probability; no way to bias towards specific tracks
