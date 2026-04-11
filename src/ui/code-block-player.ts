@@ -124,6 +124,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		const el = this.containerEl;
 		el.empty();
 		el.addClass("rpg-audio-player");
+		el.dataset.trackId = this.def.id;
 
 		const header = el.createDiv({cls: "rpg-audio-header"});
 		const iconEl = header.createSpan({cls: "rpg-audio-icon"});
