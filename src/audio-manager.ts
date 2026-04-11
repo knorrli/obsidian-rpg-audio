@@ -346,6 +346,7 @@ export class AudioManager extends Events {
 			this.orphanTimers.delete(id);
 			const state = this.tracks.get(id);
 			if (!state) return;
+			if (this.hasLivePlayerElement(id)) return;
 			if (state.playState === PlayState.Playing || state.playState === PlayState.Paused) {
 				this.pendingOrphans.add(id);
 				return;
@@ -355,10 +356,23 @@ export class AudioManager extends Events {
 		this.orphanTimers.set(id, timer);
 	}
 
-	private cleanupIfOrphaned(id: string): void {
-		if (this.pendingOrphans.has(id)) {
-			this.unregister(id);
+	private hasLivePlayerElement(id: string): boolean {
+		const selector = `.rpg-audio-player[data-track-id="${CSS.escape(id)}"]`;
+		const elements = document.querySelectorAll<HTMLElement>(selector);
+		for (let i = 0; i < elements.length; i++) {
+			const el = elements[i];
+			if (el && el.isConnected) return true;
 		}
+		return false;
+	}
+
+	private cleanupIfOrphaned(id: string): void {
+		if (!this.pendingOrphans.has(id)) return;
+		if (this.hasLivePlayerElement(id)) {
+			this.pendingOrphans.delete(id);
+			return;
+		}
+		this.unregister(id);
 	}
 
 	private clearOrphanTimer(id: string): void {
