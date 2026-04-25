@@ -221,6 +221,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 - **Master volume** — global volume multiplier applied to all tracks.
 - **Auto-open sidebar** — automatically open the sidebar when the plugin loads.
 - **Crossfade duration** — duration in milliseconds of the crossfade between exclusive tracks (default: 2000ms). Set to 0 to disable crossfading and use hard stops.
+- **Play fade duration** — duration in milliseconds of the fade applied when starting, pausing, and resuming a track (default: 0ms / instant). Clicking play during a fade-out reverses into a fade-in (and vice versa).
 
 ## Commands
 
