@@ -6,7 +6,7 @@ export interface RpgAudioSettings {
 	masterVolume: number;
 	autoOpenSidebar: boolean;
 	crossfadeDuration: number;
-	pauseFadeDuration: number;
+	playFadeDuration: number;
 }
 
 export const DEFAULT_SETTINGS: RpgAudioSettings = {
@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	masterVolume: 1.0,
 	autoOpenSidebar: true,
 	crossfadeDuration: 2000,
-	pauseFadeDuration: 0,
+	playFadeDuration: 0,
 };
 
 export class RpgAudioSettingTab extends PluginSettingTab {
@@ -78,15 +78,15 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName("Pause fade duration")
-			.setDesc("Fade out when pausing and fade in when resuming a track. Set to 0 to pause instantly.")
+			.setName("Play fade duration")
+			.setDesc("Fade in when starting or resuming a track and fade out when pausing. Set to 0 for instant transitions.")
 			.addSlider(slider => slider
 				.setLimits(0, 5000, 100)
-				.setValue(this.plugin.settings.pauseFadeDuration)
+				.setValue(this.plugin.settings.playFadeDuration)
 				.setDynamicTooltip()
 				.onChange(async (value) => {
-					this.plugin.settings.pauseFadeDuration = value;
-					this.plugin.audioManager.pauseFadeDuration = value;
+					this.plugin.settings.playFadeDuration = value;
+					this.plugin.audioManager.playFadeDuration = value;
 					await this.plugin.saveSettings();
 				}));
 	}

@@ -23,8 +23,8 @@ export class AudioManager extends Events {
 	private fades = new FadeEngine();
 	private fadeMultipliers: Map<string, number> = new Map();
 	private _crossfadeDuration = 0;
-	private _pauseFadeDuration = 0;
-	private pauseFades: Map<string, "out" | "in"> = new Map();
+	private _playFadeDuration = 0;
+	private playFades: Map<string, "out" | "in"> = new Map();
 
 	constructor(app: App) {
 		super();
@@ -66,12 +66,12 @@ export class AudioManager extends Events {
 		this._crossfadeDuration = value;
 	}
 
-	get pauseFadeDuration(): number {
-		return this._pauseFadeDuration;
+	get playFadeDuration(): number {
+		return this._playFadeDuration;
 	}
 
-	set pauseFadeDuration(value: number) {
-		this._pauseFadeDuration = value;
+	set playFadeDuration(value: number) {
+		this._playFadeDuration = value;
 	}
 
 	get masterVolume(): number {
@@ -119,7 +119,7 @@ export class AudioManager extends Events {
 		this.pendingOrphans.delete(id);
 		this.fades.cancel(id);
 		this.fadeMultipliers.delete(id);
-		this.pauseFades.delete(id);
+		this.playFades.delete(id);
 		this.stop(id);
 		const el = this.audioElements.get(id);
 		if (el) {
@@ -137,20 +137,19 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACKS_UPDATED);
 	}
 
-	async play(id: string, skipPauseFadeIn = false): Promise<void> {
+	async play(id: string, skipPlayFadeIn = false): Promise<void> {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
-		const fadeMode = this.pauseFades.get(id);
+		const fadeMode = this.playFades.get(id);
 		if (fadeMode === "out") {
-			this.startPauseFadeIn(id);
+			this.startPlayFadeIn(id);
 			return;
 		}
 		if (fadeMode === "in") {
 			return;
 		}
 
-		const wasPaused = state.playState === PlayState.Paused;
 		let crossfading = false;
 		if (state.def.stops.length > 0) {
 			for (const [otherId, other] of this.tracks) {
@@ -194,7 +193,7 @@ export class AudioManager extends Events {
 		}
 
 		const useCrossfadeIn = crossfading;
-		const usePauseFadeIn = !crossfading && !skipPauseFadeIn && wasPaused && this._pauseFadeDuration > 0;
+		const usePlayFadeIn = !crossfading && !skipPlayFadeIn && this._playFadeDuration > 0;
 
 		if (state.def.random && state.def.files.length > 1 && state.playState !== PlayState.Paused) {
 			state.currentIndex = Math.floor(Math.random() * state.def.files.length);
@@ -231,10 +230,10 @@ export class AudioManager extends Events {
 			state.error = null;
 			if (useCrossfadeIn) {
 				this.fadeIn(id, this._crossfadeDuration);
-			} else if (usePauseFadeIn) {
+			} else if (usePlayFadeIn) {
 				this.fadeMultipliers.set(id, 0);
 				this.applyVolume(id);
-				this.startPauseFadeIn(id);
+				this.startPlayFadeIn(id);
 			} else {
 				this.applyVolume(id);
 			}
@@ -250,20 +249,20 @@ export class AudioManager extends Events {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
-		const fadeMode = this.pauseFades.get(id);
+		const fadeMode = this.playFades.get(id);
 		if (fadeMode === "out") {
-			if (fromUserToggle) this.startPauseFadeIn(id);
+			if (fromUserToggle) this.startPlayFadeIn(id);
 			return;
 		}
 		if (fadeMode === "in") {
-			this.startPauseFadeOut(id);
+			this.startPlayFadeOut(id);
 			return;
 		}
 
 		if (state.playState !== PlayState.Playing) return;
 
-		if (this._pauseFadeDuration > 0) {
-			this.startPauseFadeOut(id);
+		if (this._playFadeDuration > 0) {
+			this.startPlayFadeOut(id);
 		} else {
 			this.applyPause(id);
 		}
@@ -276,58 +275,58 @@ export class AudioManager extends Events {
 		const el = this.audioElements.get(id);
 		if (el) el.pause();
 
-		this.pauseFades.delete(id);
+		this.playFades.delete(id);
 		this.fadeMultipliers.delete(id);
 		this.applyVolume(id);
 		state.playState = PlayState.Paused;
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	private startPauseFadeOut(id: string): void {
+	private startPlayFadeOut(id: string): void {
 		const current = this.fadeMultipliers.get(id) ?? 1;
 		if (current <= 0) {
 			this.applyPause(id);
 			return;
 		}
-		this.pauseFades.set(id, "out");
-		const duration = this._pauseFadeDuration * current;
+		this.playFades.set(id, "out");
+		const duration = this._playFadeDuration * current;
 		this.fades.start(id, current, 0, duration, (value) => {
 			this.fadeMultipliers.set(id, value);
 			this.applyVolume(id);
 		}).then((completed) => {
-			if (this.pauseFades.get(id) !== "out") return;
+			if (this.playFades.get(id) !== "out") return;
 			if (completed) {
 				this.applyPause(id);
 			} else {
-				this.pauseFades.delete(id);
+				this.playFades.delete(id);
 			}
 		}).catch((e) => {
-			console.error(`RPG Audio: pause fade-out failed for "${id}"`, e);
+			console.error(`RPG Audio: play fade-out failed for "${id}"`, e);
 		});
 	}
 
-	private startPauseFadeIn(id: string): void {
+	private startPlayFadeIn(id: string): void {
 		const current = this.fadeMultipliers.get(id) ?? 0;
 		if (current >= 1) {
-			this.pauseFades.delete(id);
+			this.playFades.delete(id);
 			this.fadeMultipliers.delete(id);
 			this.applyVolume(id);
 			return;
 		}
-		this.pauseFades.set(id, "in");
-		const duration = this._pauseFadeDuration * (1 - current);
+		this.playFades.set(id, "in");
+		const duration = this._playFadeDuration * (1 - current);
 		this.fades.start(id, current, 1, duration, (value) => {
 			this.fadeMultipliers.set(id, value);
 			this.applyVolume(id);
 		}).then((completed) => {
-			if (this.pauseFades.get(id) !== "in") return;
-			this.pauseFades.delete(id);
+			if (this.playFades.get(id) !== "in") return;
+			this.playFades.delete(id);
 			if (completed) {
 				this.fadeMultipliers.delete(id);
 				this.applyVolume(id);
 			}
 		}).catch((e) => {
-			console.error(`RPG Audio: pause fade-in failed for "${id}"`, e);
+			console.error(`RPG Audio: play fade-in failed for "${id}"`, e);
 		});
 	}
 
@@ -337,7 +336,7 @@ export class AudioManager extends Events {
 
 		this.fades.cancel(id);
 		this.fadeMultipliers.delete(id);
-		this.pauseFades.delete(id);
+		this.playFades.delete(id);
 
 		const el = this.audioElements.get(id);
 		if (el) {
@@ -355,7 +354,7 @@ export class AudioManager extends Events {
 	stopAll(): void {
 		this.fades.cancelAll();
 		this.fadeMultipliers.clear();
-		this.pauseFades.clear();
+		this.playFades.clear();
 		for (const [id] of this.tracks) {
 			this.stop(id);
 		}
@@ -488,7 +487,7 @@ export class AudioManager extends Events {
 	destroyAll(): void {
 		this.fades.destroy();
 		this.fadeMultipliers.clear();
-		this.pauseFades.clear();
+		this.playFades.clear();
 		this.pendingOrphans.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
