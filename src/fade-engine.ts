@@ -5,7 +5,7 @@ interface ActiveFade {
 	duration: number;
 	startTime: number;
 	onTick: (value: number) => void;
-	resolve: () => void;
+	resolve: (completed: boolean) => void;
 }
 
 export class FadeEngine {
@@ -18,10 +18,10 @@ export class FadeEngine {
 		to: number,
 		durationMs: number,
 		onTick: (value: number) => void,
-	): Promise<void> {
+	): Promise<boolean> {
 		this.cancel(id);
 
-		return new Promise<void>((resolve) => {
+		return new Promise<boolean>((resolve) => {
 			const fade: ActiveFade = {
 				id,
 				from,
@@ -40,14 +40,14 @@ export class FadeEngine {
 		const fade = this.activeFades.get(id);
 		if (fade) {
 			this.activeFades.delete(id);
-			fade.resolve();
+			fade.resolve(false);
 		}
 		if (this.activeFades.size === 0) this.stopLoop();
 	}
 
 	cancelAll(): void {
 		for (const fade of this.activeFades.values()) {
-			fade.resolve();
+			fade.resolve(false);
 		}
 		this.activeFades.clear();
 		this.stopLoop();
@@ -67,7 +67,7 @@ export class FadeEngine {
 				fade.onTick(value);
 				if (t >= 1) {
 					this.activeFades.delete(fade.id);
-					fade.resolve();
+					fade.resolve(true);
 				}
 			}
 			if (this.activeFades.size > 0) {

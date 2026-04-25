@@ -6,6 +6,7 @@ export interface RpgAudioSettings {
 	masterVolume: number;
 	autoOpenSidebar: boolean;
 	crossfadeDuration: number;
+	pauseFadeDuration: number;
 }
 
 export const DEFAULT_SETTINGS: RpgAudioSettings = {
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	masterVolume: 1.0,
 	autoOpenSidebar: true,
 	crossfadeDuration: 2000,
+	pauseFadeDuration: 0,
 };
 
 export class RpgAudioSettingTab extends PluginSettingTab {
@@ -72,6 +74,19 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.crossfadeDuration = value;
 					this.plugin.audioManager.crossfadeDuration = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Pause fade duration")
+			.setDesc("Fade out when pausing and fade in when resuming a track. Set to 0 to pause instantly.")
+			.addSlider(slider => slider
+				.setLimits(0, 5000, 100)
+				.setValue(this.plugin.settings.pauseFadeDuration)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.pauseFadeDuration = value;
+					this.plugin.audioManager.pauseFadeDuration = value;
 					await this.plugin.saveSettings();
 				}));
 	}

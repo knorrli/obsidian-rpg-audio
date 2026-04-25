@@ -23,6 +23,8 @@ export class AudioManager extends Events {
 	private fades = new FadeEngine();
 	private fadeMultipliers: Map<string, number> = new Map();
 	private _crossfadeDuration = 0;
+	private _pauseFadeDuration = 0;
+	private pauseFades: Map<string, "out" | "in"> = new Map();
 
 	constructor(app: App) {
 		super();
@@ -62,6 +64,14 @@ export class AudioManager extends Events {
 
 	set crossfadeDuration(value: number) {
 		this._crossfadeDuration = value;
+	}
+
+	get pauseFadeDuration(): number {
+		return this._pauseFadeDuration;
+	}
+
+	set pauseFadeDuration(value: number) {
+		this._pauseFadeDuration = value;
 	}
 
 	get masterVolume(): number {
@@ -109,6 +119,7 @@ export class AudioManager extends Events {
 		this.pendingOrphans.delete(id);
 		this.fades.cancel(id);
 		this.fadeMultipliers.delete(id);
+		this.pauseFades.delete(id);
 		this.stop(id);
 		const el = this.audioElements.get(id);
 		if (el) {
@@ -126,10 +137,20 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACKS_UPDATED);
 	}
 
-	async play(id: string): Promise<void> {
+	async play(id: string, skipPauseFadeIn = false): Promise<void> {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
+		const fadeMode = this.pauseFades.get(id);
+		if (fadeMode === "out") {
+			this.startPauseFadeIn(id);
+			return;
+		}
+		if (fadeMode === "in") {
+			return;
+		}
+
+		const wasPaused = state.playState === PlayState.Paused;
 		let crossfading = false;
 		if (state.def.stops.length > 0) {
 			for (const [otherId, other] of this.tracks) {
@@ -150,7 +171,7 @@ export class AudioManager extends Events {
 					if (this._crossfadeDuration > 0) {
 						this.fadeOutAndPause(otherId, this._crossfadeDuration);
 					} else {
-						this.pause(otherId);
+						this.pause(otherId, false);
 					}
 				}
 			}
@@ -160,7 +181,7 @@ export class AudioManager extends Events {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && state.def.starts.includes(other.def.type) && other.playState === PlayState.Paused) {
 					if (this._crossfadeDuration > 0) {
-						this.play(otherId).then(() => {
+						this.play(otherId, true).then(() => {
 							this.fadeIn(otherId, this._crossfadeDuration);
 						}).catch((e) => {
 							console.error(`RPG Audio: starts fade-in failed for "${otherId}"`, e);
@@ -172,7 +193,8 @@ export class AudioManager extends Events {
 			}
 		}
 
-		const shouldFadeIn = crossfading;
+		const useCrossfadeIn = crossfading;
+		const usePauseFadeIn = !crossfading && !skipPauseFadeIn && wasPaused && this._pauseFadeDuration > 0;
 
 		if (state.def.random && state.def.files.length > 1 && state.playState !== PlayState.Paused) {
 			state.currentIndex = Math.floor(Math.random() * state.def.files.length);
@@ -207,8 +229,12 @@ export class AudioManager extends Events {
 			await el.play();
 			state.playState = PlayState.Playing;
 			state.error = null;
-			if (shouldFadeIn) {
+			if (useCrossfadeIn) {
 				this.fadeIn(id, this._crossfadeDuration);
+			} else if (usePauseFadeIn) {
+				this.fadeMultipliers.set(id, 0);
+				this.applyVolume(id);
+				this.startPauseFadeIn(id);
 			} else {
 				this.applyVolume(id);
 			}
@@ -220,15 +246,89 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	pause(id: string): void {
+	pause(id: string, fromUserToggle = true): void {
 		const state = this.tracks.get(id);
-		if (!state || state.playState !== PlayState.Playing) return;
+		if (!state) return;
+
+		const fadeMode = this.pauseFades.get(id);
+		if (fadeMode === "out") {
+			if (fromUserToggle) this.startPauseFadeIn(id);
+			return;
+		}
+		if (fadeMode === "in") {
+			this.startPauseFadeOut(id);
+			return;
+		}
+
+		if (state.playState !== PlayState.Playing) return;
+
+		if (this._pauseFadeDuration > 0) {
+			this.startPauseFadeOut(id);
+		} else {
+			this.applyPause(id);
+		}
+	}
+
+	private applyPause(id: string): void {
+		const state = this.tracks.get(id);
+		if (!state) return;
 
 		const el = this.audioElements.get(id);
 		if (el) el.pause();
 
+		this.pauseFades.delete(id);
+		this.fadeMultipliers.delete(id);
+		this.applyVolume(id);
 		state.playState = PlayState.Paused;
 		this.trigger(EVENT_TRACK_CHANGED, id);
+	}
+
+	private startPauseFadeOut(id: string): void {
+		const current = this.fadeMultipliers.get(id) ?? 1;
+		if (current <= 0) {
+			this.applyPause(id);
+			return;
+		}
+		this.pauseFades.set(id, "out");
+		const duration = this._pauseFadeDuration * current;
+		this.fades.start(id, current, 0, duration, (value) => {
+			this.fadeMultipliers.set(id, value);
+			this.applyVolume(id);
+		}).then((completed) => {
+			if (this.pauseFades.get(id) !== "out") return;
+			if (completed) {
+				this.applyPause(id);
+			} else {
+				this.pauseFades.delete(id);
+			}
+		}).catch((e) => {
+			console.error(`RPG Audio: pause fade-out failed for "${id}"`, e);
+		});
+	}
+
+	private startPauseFadeIn(id: string): void {
+		const current = this.fadeMultipliers.get(id) ?? 0;
+		if (current >= 1) {
+			this.pauseFades.delete(id);
+			this.fadeMultipliers.delete(id);
+			this.applyVolume(id);
+			return;
+		}
+		this.pauseFades.set(id, "in");
+		const duration = this._pauseFadeDuration * (1 - current);
+		this.fades.start(id, current, 1, duration, (value) => {
+			this.fadeMultipliers.set(id, value);
+			this.applyVolume(id);
+		}).then((completed) => {
+			if (this.pauseFades.get(id) !== "in") return;
+			this.pauseFades.delete(id);
+			if (completed) {
+				this.fadeMultipliers.delete(id);
+				this.applyVolume(id);
+			}
+		}).catch((e) => {
+			console.error(`RPG Audio: pause fade-in failed for "${id}"`, e);
+		});
 	}
 
 	stop(id: string): void {
@@ -237,6 +337,7 @@ export class AudioManager extends Events {
 
 		this.fades.cancel(id);
 		this.fadeMultipliers.delete(id);
+		this.pauseFades.delete(id);
 
 		const el = this.audioElements.get(id);
 		if (el) {
@@ -254,6 +355,7 @@ export class AudioManager extends Events {
 	stopAll(): void {
 		this.fades.cancelAll();
 		this.fadeMultipliers.clear();
+		this.pauseFades.clear();
 		for (const [id] of this.tracks) {
 			this.stop(id);
 		}
@@ -266,9 +368,9 @@ export class AudioManager extends Events {
 				this.fades.start(id, current, 0, duration, (value) => {
 					this.fadeMultipliers.set(id, value);
 					this.applyVolume(id);
-				}).then(() => {
-					this.pause(id);
-					this.fadeMultipliers.delete(id);
+				}).then((completed) => {
+					if (!completed) return;
+					this.applyPause(id);
 				}).catch((e) => {
 					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 				});
@@ -281,7 +383,7 @@ export class AudioManager extends Events {
 			if (state.playState === PlayState.Paused) {
 				this.fadeMultipliers.set(id, 0);
 				this.applyVolume(id);
-				this.play(id).then(() => {
+				this.play(id, true).then(() => {
 					this.fades.start(id, 0, 1, duration, (value) => {
 						this.fadeMultipliers.set(id, value);
 						this.applyVolume(id);
@@ -302,9 +404,9 @@ export class AudioManager extends Events {
 				this.fades.start(id, current, 0, duration, (value) => {
 					this.fadeMultipliers.set(id, value);
 					this.applyVolume(id);
-				}).then(() => {
-					this.pause(id);
-					this.fadeMultipliers.delete(id);
+				}).then((completed) => {
+					if (!completed) return;
+					this.applyPause(id);
 				}).catch((e) => {
 					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 				});
@@ -317,7 +419,7 @@ export class AudioManager extends Events {
 			if (state.def.type === type && state.playState === PlayState.Paused) {
 				this.fadeMultipliers.set(id, 0);
 				this.applyVolume(id);
-				this.play(id).then(() => {
+				this.play(id, true).then(() => {
 					this.fades.start(id, 0, 1, duration, (value) => {
 						this.fadeMultipliers.set(id, value);
 						this.applyVolume(id);
@@ -386,6 +488,7 @@ export class AudioManager extends Events {
 	destroyAll(): void {
 		this.fades.destroy();
 		this.fadeMultipliers.clear();
+		this.pauseFades.clear();
 		this.pendingOrphans.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
@@ -485,7 +588,9 @@ export class AudioManager extends Events {
 		this.fades.start(id, current, 0, duration, (value) => {
 			this.fadeMultipliers.set(id, value);
 			this.applyVolume(id);
-		}).then(onComplete).catch((e) => {
+		}).then((completed) => {
+			if (completed) onComplete();
+		}).catch((e) => {
 			console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 		});
 	}
@@ -496,6 +601,8 @@ export class AudioManager extends Events {
 		this.fades.start(id, 0, 1, duration, (value) => {
 			this.fadeMultipliers.set(id, value);
 			this.applyVolume(id);
+		}).then((completed) => {
+			if (completed) this.fadeMultipliers.delete(id);
 		}).catch((e) => {
 			console.error(`RPG Audio: fade-in failed for "${id}"`, e);
 		});
