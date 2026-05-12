@@ -23,6 +23,7 @@ function generateCodeBlock(opts: {
 	files: string[];
 	loop: boolean;
 	random: boolean;
+	autoplay: boolean;
 	stops: string;
 	pauses: string;
 	starts: string;
@@ -33,6 +34,7 @@ function generateCodeBlock(opts: {
 	lines.push(`type: ${opts.type}`);
 	if (opts.loop) lines.push("loop: true");
 	if (opts.random) lines.push("random: true");
+	if (opts.autoplay) lines.push("autoplay: true");
 	if (opts.stops.trim()) lines.push(`stops: ${opts.stops.trim()}`);
 	if (opts.pauses.trim()) lines.push(`pauses: ${opts.pauses.trim()}`);
 	if (opts.starts.trim()) lines.push(`starts: ${opts.starts.trim()}`);
@@ -85,6 +87,7 @@ export class InsertTrackModal extends Modal {
 	private selectedFiles: string[] = [];
 	private loop = false;
 	private random = false;
+	private autoplay = false;
 	private stops = "";
 	private pauses = "";
 	private starts = "";
@@ -189,6 +192,13 @@ export class InsertTrackModal extends Modal {
 			.addToggle(toggle => toggle
 				.setValue(this.random)
 				.onChange(value => { this.random = value; }));
+
+		new Setting(contentEl)
+			.setName("Autoplay")
+			.setDesc("Start playing as soon as the track is rendered, like when opening a note or hovering a link popover")
+			.addToggle(toggle => toggle
+				.setValue(this.autoplay)
+				.onChange(value => { this.autoplay = value; }));
 
 		// Advanced section
 		contentEl.createEl("details", {}, details => {
@@ -301,6 +311,7 @@ export class InsertTrackModal extends Modal {
 			files: this.selectedFiles,
 			loop: this.loop,
 			random: this.random,
+			autoplay: this.autoplay,
 			stops: this.stops,
 			pauses: this.pauses,
 			starts: this.starts,

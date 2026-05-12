@@ -18,8 +18,9 @@ export default class RpgAudioPlugin extends Plugin {
 		this.audioManager.audioFolder = this.settings.audioFolder;
 		this.audioManager.crossfadeDuration = this.settings.crossfadeDuration;
 		this.audioManager.playFadeDuration = this.settings.playFadeDuration;
+		this.audioManager.allowAutoplay = this.settings.allowAutoplay;
 
-		this.registerView(SIDEBAR_VIEW_TYPE, (leaf) => new RpgAudioSidebarView(leaf, this.audioManager));
+		this.registerView(SIDEBAR_VIEW_TYPE, (leaf) => new RpgAudioSidebarView(leaf, this));
 
 		this.registerMarkdownCodeBlockProcessor("rpg-audio", (source, el, ctx) => {
 			const def = parseAudioBlock(source);

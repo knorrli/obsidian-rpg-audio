@@ -11,6 +11,7 @@ export interface AudioTrackDef {
 	files: string[];
 	loop: boolean;
 	random: boolean;
+	autoplay: boolean;
 	stops: string[];
 	starts: string[];
 	pauses: string[];
@@ -27,6 +28,7 @@ export interface AudioTrackState {
 export const EVENT_TRACK_CHANGED = "track-changed";
 export const EVENT_TRACKS_UPDATED = "tracks-updated";
 export const EVENT_MASTER_VOLUME = "master-volume";
+export const EVENT_ALLOW_AUTOPLAY = "allow-autoplay";
 
 export const SIDEBAR_VIEW_TYPE = "rpg-audio-sidebar";
 

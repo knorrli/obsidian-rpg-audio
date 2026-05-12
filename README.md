@@ -13,6 +13,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
+- **Autoplay** — mark tracks with `autoplay: true` and they start playing as soon as their note opens or is shown in a hover popover. Gated by a sidebar toggle so prep stays silent and you only flip it on at the start of a session
 - **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax. Pick files from a fuzzy search, set type/loop/random, and insert the block at your cursor
 
 ## Use cases
@@ -61,6 +62,7 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
 | `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
 | `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
+| `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on — otherwise tracks marked `autoplay: true` stay silent until you press play. Existing `stops`/`pauses`/`starts` rules still apply, so autoplaying tracks of the same exclusive type will swap cleanly. Defaults to `false`. |
 | `stops`     | No   | Comma-separated list of types to stop when this track starts playing (e.g. `music, ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
 | `pauses`    | No   | Comma-separated list of types to pause when this track starts playing (e.g. `ambience`). Like `stops`, but paused tracks keep their position and can be resumed later. Fades out if crossfade is configured. |
 | `starts`    | No   | Comma-separated list of types to resume when this track starts playing (e.g. `ambience`). Resumes tracks that were previously paused. Fades in if crossfade is configured. |
@@ -227,7 +229,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 
 - **Toggle audio sidebar** — show or hide the audio sidebar panel.
 - **Stop all audio** — stop all currently playing tracks.
-- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor. Lets you set the name, type, files (via fuzzy search), loop, random, and advanced options (stops/pauses/starts) through a form instead of writing YAML by hand.
+- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor. Lets you set the name, type, files (via fuzzy search), loop, random, autoplay, and advanced options (stops/pauses/starts) through a form instead of writing YAML by hand.
 
 ## Caveats
 

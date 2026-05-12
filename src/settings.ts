@@ -5,6 +5,7 @@ export interface RpgAudioSettings {
 	audioFolder: string;
 	masterVolume: number;
 	autoOpenSidebar: boolean;
+	allowAutoplay: boolean;
 	crossfadeDuration: number;
 	playFadeDuration: number;
 }
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	audioFolder: "audio",
 	masterVolume: 1.0,
 	autoOpenSidebar: true,
+	allowAutoplay: false,
 	crossfadeDuration: 2000,
 	playFadeDuration: 0,
 };
