@@ -7,6 +7,7 @@ import {
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
 	EVENT_ALLOW_AUTOPLAY,
+	EVENT_ACTIVE_SCOPE_CHANGED,
 	ORPHAN_CHECK_DELAY_MS,
 } from "./types";
 import { FadeEngine } from "./fade-engine";
@@ -40,6 +41,7 @@ export class AudioManager extends Events {
 	private _playFadeDuration = 0;
 	private _allowAutoplay = false;
 	private playFades: Map<string, "out" | "in"> = new Map();
+	private _activeScope: Set<string> = new Set();
 
 	constructor(app: App) {
 		super();
@@ -113,6 +115,47 @@ export class AudioManager extends Events {
 
 	getAllTracks(): AudioTrackState[] {
 		return Array.from(this.tracks.values());
+	}
+
+	get activeScope(): string[] {
+		return Array.from(this._activeScope);
+	}
+
+	private isScopeSubset(child: string[], parent: Set<string>): boolean {
+		for (const s of child) {
+			if (!parent.has(s)) return false;
+		}
+		return true;
+	}
+
+	/** Returns true if any track was crossfaded out by the transition. */
+	private applyScopeTransition(triggerId: string): boolean {
+		const trigger = this.tracks.get(triggerId);
+		if (!trigger || trigger.def.scope.length === 0) return false;
+
+		const newActive = new Set(trigger.def.scope);
+		const changed =
+			newActive.size !== this._activeScope.size ||
+			!this.isScopeSubset(Array.from(newActive), this._activeScope);
+		this._activeScope = newActive;
+
+		let crossfaded = false;
+		for (const [otherId, other] of this.tracks) {
+			if (otherId === triggerId) continue;
+			if (other.def.scope.length === 0) continue;
+			if (other.playState !== PlayState.Playing) continue;
+			if (this.isScopeSubset(other.def.scope, newActive)) continue;
+
+			if (this._crossfadeDuration > 0) {
+				this.fadeOutAndStop(otherId, this._crossfadeDuration);
+				crossfaded = true;
+			} else {
+				this.stop(otherId);
+			}
+		}
+
+		if (changed) this.trigger(EVENT_ACTIVE_SCOPE_CHANGED, this.activeScope);
+		return crossfaded;
 	}
 
 	getTrack(id: string): AudioTrackState | undefined {
@@ -215,6 +258,10 @@ export class AudioManager extends Events {
 					}
 				}
 			}
+		}
+
+		if (state.def.scope.length > 0) {
+			if (this.applyScopeTransition(id)) crossfading = true;
 		}
 
 		const useCrossfadeIn = crossfading;
@@ -514,6 +561,7 @@ export class AudioManager extends Events {
 		this.fadeMultipliers.clear();
 		this.playFades.clear();
 		this.pendingOrphans.clear();
+		this._activeScope.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
 		}

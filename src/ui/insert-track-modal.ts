@@ -27,6 +27,7 @@ function generateCodeBlock(opts: {
 	stops: string;
 	pauses: string;
 	resumes: string;
+	scope: string;
 }): string {
 	const lines: string[] = [];
 	lines.push(`id: ${opts.id}`);
@@ -35,6 +36,7 @@ function generateCodeBlock(opts: {
 	if (opts.loop) lines.push("loop: true");
 	if (opts.random) lines.push("random: true");
 	if (opts.autoplay) lines.push("autoplay: true");
+	if (opts.scope.trim()) lines.push(`scope: ${opts.scope.trim()}`);
 	if (opts.stops.trim()) lines.push(`stops: ${opts.stops.trim()}`);
 	if (opts.pauses.trim()) lines.push(`pauses: ${opts.pauses.trim()}`);
 	if (opts.resumes.trim()) lines.push(`resumes: ${opts.resumes.trim()}`);
@@ -91,6 +93,7 @@ export class InsertTrackModal extends Modal {
 	private stops = "";
 	private pauses = "";
 	private resumes = "";
+	private scopeInput = "";
 
 	private fileListEl: HTMLElement | null = null;
 	private insertBtn: HTMLButtonElement | null = null;
@@ -199,6 +202,14 @@ export class InsertTrackModal extends Modal {
 			.addToggle(toggle => toggle
 				.setValue(this.autoplay)
 				.onChange(value => { this.autoplay = value; }));
+
+		new Setting(contentEl)
+			.setName("Scope")
+			.setDesc("Comma-separated context labels. Playing a track stops other-scope tracks (e.g. tavern, outdoors)")
+			.addText(text => text
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				.setPlaceholder("tavern, outdoors")
+				.onChange(value => { this.scopeInput = value; }));
 
 		// Advanced section
 		contentEl.createEl("details", {}, details => {
@@ -315,6 +326,7 @@ export class InsertTrackModal extends Modal {
 			stops: this.stops,
 			pauses: this.pauses,
 			resumes: this.resumes,
+			scope: this.scopeInput,
 		});
 		this.onInsert(block);
 		this.close();

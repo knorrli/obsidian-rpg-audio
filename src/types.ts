@@ -15,6 +15,7 @@ export interface AudioTrackDef {
 	stops: string[];
 	resumes: string[];
 	pauses: string[];
+	scope: string[];
 }
 
 export interface AudioTrackState {
@@ -29,6 +30,7 @@ export const EVENT_TRACK_CHANGED = "track-changed";
 export const EVENT_TRACKS_UPDATED = "tracks-updated";
 export const EVENT_MASTER_VOLUME = "master-volume";
 export const EVENT_ALLOW_AUTOPLAY = "allow-autoplay";
+export const EVENT_ACTIVE_SCOPE_CHANGED = "active-scope-changed";
 
 export const SIDEBAR_VIEW_TYPE = "rpg-audio-sidebar";
 
