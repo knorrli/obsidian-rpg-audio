@@ -11,6 +11,19 @@ import {
 } from "./types";
 import { FadeEngine } from "./fade-engine";
 
+function matchesDirective(tokens: string[], otherId: string, otherType: string): boolean {
+	let matched = false;
+	for (const token of tokens) {
+		if (token.startsWith("!")) {
+			const negated = token.slice(1);
+			if (negated === otherType || negated === otherId) return false;
+		} else if (token === otherType || token === otherId) {
+			matched = true;
+		}
+	}
+	return matched;
+}
+
 export class AudioManager extends Events {
 	private app: App;
 	private tracks: Map<string, AudioTrackState> = new Map();
@@ -165,7 +178,7 @@ export class AudioManager extends Events {
 		let crossfading = false;
 		if (state.def.stops.length > 0) {
 			for (const [otherId, other] of this.tracks) {
-				if (otherId !== id && state.def.stops.includes(other.def.type) && other.playState === PlayState.Playing) {
+				if (otherId !== id && matchesDirective(state.def.stops, otherId, other.def.type) && other.playState === PlayState.Playing) {
 					if (this._crossfadeDuration > 0) {
 						this.fadeOutAndStop(otherId, this._crossfadeDuration);
 						crossfading = true;
@@ -178,7 +191,7 @@ export class AudioManager extends Events {
 
 		if (state.def.pauses.length > 0) {
 			for (const [otherId, other] of this.tracks) {
-				if (otherId !== id && state.def.pauses.includes(other.def.type) && other.playState === PlayState.Playing) {
+				if (otherId !== id && matchesDirective(state.def.pauses, otherId, other.def.type) && other.playState === PlayState.Playing) {
 					if (this._crossfadeDuration > 0) {
 						this.fadeOutAndPause(otherId, this._crossfadeDuration);
 					} else {
@@ -190,7 +203,7 @@ export class AudioManager extends Events {
 
 		if (state.def.resumes.length > 0) {
 			for (const [otherId, other] of this.tracks) {
-				if (otherId !== id && state.def.resumes.includes(other.def.type) && other.playState === PlayState.Paused) {
+				if (otherId !== id && matchesDirective(state.def.resumes, otherId, other.def.type) && other.playState === PlayState.Paused) {
 					if (this._crossfadeDuration > 0) {
 						this.play(otherId, true).then(() => {
 							this.fadeIn(otherId, this._crossfadeDuration);
