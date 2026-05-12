@@ -13,7 +13,7 @@ export interface AudioTrackDef {
 	random: boolean;
 	autoplay: boolean;
 	stops: string[];
-	starts: string[];
+	resumes: string[];
 	pauses: string[];
 }
 

@@ -9,7 +9,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 
 - **Inline players** — add `rpg-audio` code blocks to any note and get play/pause, stop, and volume controls right next to your encounter text
 - **Sidebar** — a dedicated panel showing all tracks grouped by type, with global and per-group fade controls
-- **Crossfade** — tracks with `stops:`, `pauses:`, or `starts:` automatically crossfade between each other (configurable duration, or instant)
+- **Crossfade** — tracks with `stops:`, `pauses:`, or `resumes:` automatically crossfade between each other (configurable duration, or instant)
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
@@ -20,7 +20,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 
 - **GMs who prep in Obsidian** — embed audio controls right next to your encounter notes. When the party enters the tavern, hit play without alt-tabbing.
 - **Layered soundscapes** — run rain ambience, tavern chatter, and a bard's tune simultaneously, each with its own volume.
-- **One-click scene transitions** — use `stops:` to crossfade from exploration music to battle music with a single button press. Use `pauses:` and `starts:` for temporary transitions that resume where they left off.
+- **One-click scene transitions** — use `stops:` to crossfade from exploration music to battle music with a single button press. Use `pauses:` and `resumes:` for temporary transitions that resume where they left off.
 - **Solo RPG / journaling** — set the mood for your solo sessions.
 
 ## Quick start
@@ -62,10 +62,10 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
 | `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
 | `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
-| `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on — otherwise tracks marked `autoplay: true` stay silent until you press play. Existing `stops`/`pauses`/`starts` rules still apply, so autoplaying tracks of the same exclusive type will swap cleanly. Defaults to `false`. |
+| `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on — otherwise tracks marked `autoplay: true` stay silent until you press play. Existing `stops`/`pauses`/`resumes` rules still apply, so autoplaying tracks of the same exclusive type will swap cleanly. Defaults to `false`. |
 | `stops`     | No   | Comma-separated list of types to stop when this track starts playing (e.g. `music, ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
 | `pauses`    | No   | Comma-separated list of types to pause when this track starts playing (e.g. `ambience`). Like `stops`, but paused tracks keep their position and can be resumed later. Fades out if crossfade is configured. |
-| `starts`    | No   | Comma-separated list of types to resume when this track starts playing (e.g. `ambience`). Resumes tracks that were previously paused. Fades in if crossfade is configured. |
+| `resumes`   | No   | Comma-separated list of types to resume when this track starts playing (e.g. `ambience`). Only affects tracks that are currently paused — stopped tracks are not started. Fades in if crossfade is configured. Accepts `starts:` as a deprecated alias. |
 | `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
 | `files` | \*       | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
 
@@ -191,7 +191,7 @@ file: audio/sfx/door-open.mp3
 id: exit-house
 name: Exit House
 type: sfx
-starts: ambience
+resumes: ambience
 file: audio/sfx/door-close.mp3
 ```
 ````
@@ -212,7 +212,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 ## Tips
 
 - Use `stops: music` on all your music tracks so only one plays at a time — switching scenes is a single click
-- Use `pauses:` and `starts:` for temporary scene changes (e.g. entering/leaving a building) where you want audio to resume from where it left off
+- Use `pauses:` and `resumes:` for temporary scene changes (e.g. entering/leaving a building) where you want audio to resume from where it left off
 - Keep ambience and SFX as separate types so you can fade out ambience without killing sound effects
 - Organize your audio folder by type: `audio/music/`, `audio/ambience/`, `audio/sfx/`
 - File paths can be absolute from the vault root (`audio/music/tavern.mp3`) or relative to the configured audio folder (`music/tavern.mp3`)
@@ -229,7 +229,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 
 - **Toggle audio sidebar** — show or hide the audio sidebar panel.
 - **Stop all audio** — stop all currently playing tracks.
-- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor. Lets you set the name, type, files (via fuzzy search), loop, random, autoplay, and advanced options (stops/pauses/starts) through a form instead of writing YAML by hand.
+- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor. Lets you set the name, type, files (via fuzzy search), loop, random, autoplay, and advanced options (stops/pauses/resumes) through a form instead of writing YAML by hand.
 
 ## Caveats
 
