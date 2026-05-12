@@ -26,7 +26,7 @@ function generateCodeBlock(opts: {
 	autoplay: boolean;
 	stops: string;
 	pauses: string;
-	starts: string;
+	resumes: string;
 }): string {
 	const lines: string[] = [];
 	lines.push(`id: ${opts.id}`);
@@ -37,7 +37,7 @@ function generateCodeBlock(opts: {
 	if (opts.autoplay) lines.push("autoplay: true");
 	if (opts.stops.trim()) lines.push(`stops: ${opts.stops.trim()}`);
 	if (opts.pauses.trim()) lines.push(`pauses: ${opts.pauses.trim()}`);
-	if (opts.starts.trim()) lines.push(`starts: ${opts.starts.trim()}`);
+	if (opts.resumes.trim()) lines.push(`resumes: ${opts.resumes.trim()}`);
 
 	if (opts.files.length === 1) {
 		lines.push(`file: ${opts.files[0]}`);
@@ -90,7 +90,7 @@ export class InsertTrackModal extends Modal {
 	private autoplay = false;
 	private stops = "";
 	private pauses = "";
-	private starts = "";
+	private resumes = "";
 
 	private fileListEl: HTMLElement | null = null;
 	private insertBtn: HTMLButtonElement | null = null;
@@ -221,12 +221,12 @@ export class InsertTrackModal extends Modal {
 					.onChange(value => { this.pauses = value; }));
 
 			new Setting(details)
-				.setName("Starts")
+				.setName("Resumes")
 				.setDesc("Comma-separated types to resume when this plays")
 				.addText(text => text
 					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					.setPlaceholder("ambience")
-					.onChange(value => { this.starts = value; }));
+					.onChange(value => { this.resumes = value; }));
 		});
 
 		// Insert button
@@ -314,7 +314,7 @@ export class InsertTrackModal extends Modal {
 			autoplay: this.autoplay,
 			stops: this.stops,
 			pauses: this.pauses,
-			starts: this.starts,
+			resumes: this.resumes,
 		});
 		this.onInsert(block);
 		this.close();
