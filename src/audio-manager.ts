@@ -6,6 +6,7 @@ import {
 	EVENT_TRACK_CHANGED,
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
+	EVENT_ALLOW_AUTOPLAY,
 	ORPHAN_CHECK_DELAY_MS,
 } from "./types";
 import { FadeEngine } from "./fade-engine";
@@ -24,6 +25,7 @@ export class AudioManager extends Events {
 	private fadeMultipliers: Map<string, number> = new Map();
 	private _crossfadeDuration = 0;
 	private _playFadeDuration = 0;
+	private _allowAutoplay = false;
 	private playFades: Map<string, "out" | "in"> = new Map();
 
 	constructor(app: App) {
@@ -72,6 +74,16 @@ export class AudioManager extends Events {
 
 	set playFadeDuration(value: number) {
 		this._playFadeDuration = value;
+	}
+
+	get allowAutoplay(): boolean {
+		return this._allowAutoplay;
+	}
+
+	set allowAutoplay(value: boolean) {
+		if (this._allowAutoplay === value) return;
+		this._allowAutoplay = value;
+		this.trigger(EVENT_ALLOW_AUTOPLAY, value);
 	}
 
 	get masterVolume(): number {

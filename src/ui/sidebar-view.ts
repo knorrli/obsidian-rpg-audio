@@ -1,28 +1,33 @@
 import {ItemView, WorkspaceLeaf, setIcon} from "obsidian";
 import {AudioManager} from "../audio-manager";
+import type RpgAudioPlugin from "../main";
 import {
 	PlayState,
 	SIDEBAR_VIEW_TYPE,
 	EVENT_TRACK_CHANGED,
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
+	EVENT_ALLOW_AUTOPLAY,
 	AudioTrackState,
 	MIN_FADE_DURATION_MS,
 } from "../types";
 import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
 
 export class RpgAudioSidebarView extends ItemView {
+	private plugin: RpgAudioPlugin;
 	private manager: AudioManager;
 	private trackRows: Map<string, {rowEl: HTMLElement; controls: PlayerControlsElements; statusEl: HTMLElement}> = new Map();
 	private contentArea: HTMLElement | null = null;
 	private masterSlider: HTMLInputElement | null = null;
+	private autoplayBtn: HTMLElement | null = null;
 	private collapsedGroups: Set<string> = new Set();
 	private globalFadeBtn: HTMLElement | null = null;
 	private typeFadeBtns: Map<string, HTMLElement> = new Map();
 
-	constructor(leaf: WorkspaceLeaf, manager: AudioManager) {
+	constructor(leaf: WorkspaceLeaf, plugin: RpgAudioPlugin) {
 		super(leaf);
-		this.manager = manager;
+		this.plugin = plugin;
+		this.manager = plugin.audioManager;
 	}
 
 	getViewType(): string {
@@ -46,6 +51,7 @@ export class RpgAudioSidebarView extends ItemView {
 		this.buildHeader(container);
 		this.contentArea = container.createDiv({cls: "rpg-audio-sidebar-content"});
 		this.renderAll();
+		this.buildFooter(container);
 
 		this.registerEvent(
 			this.manager.on(EVENT_TRACKS_UPDATED, () => this.renderAll())
@@ -61,12 +67,16 @@ export class RpgAudioSidebarView extends ItemView {
 				if (this.masterSlider) this.masterSlider.value = String(vol);
 			})
 		);
+		this.registerEvent(
+			this.manager.on(EVENT_ALLOW_AUTOPLAY, () => this.updateAutoplayBtn())
+		);
 	}
 
 	async onClose(): Promise<void> {
 		this.trackRows.clear();
 		this.contentArea = null;
 		this.masterSlider = null;
+		this.autoplayBtn = null;
 		this.globalFadeBtn = null;
 		this.typeFadeBtns.clear();
 	}
@@ -80,6 +90,10 @@ export class RpgAudioSidebarView extends ItemView {
 		const fadeDuration = () => Math.max(this.manager.crossfadeDuration, MIN_FADE_DURATION_MS);
 
 		const globalControls = titleRow.createDiv({cls: "rpg-audio-global-controls"});
+
+		this.autoplayBtn = globalControls.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
+		this.autoplayBtn.addEventListener("click", () => void this.toggleAutoplay());
+		this.updateAutoplayBtn();
 
 		this.globalFadeBtn = globalControls.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
 		this.globalFadeBtn.addEventListener("click", () => {
@@ -111,6 +125,19 @@ export class RpgAudioSidebarView extends ItemView {
 		this.masterSlider.addEventListener("input", () => {
 			this.manager.masterVolume = parseFloat(this.masterSlider!.value);
 		});
+	}
+
+	private buildFooter(container: HTMLElement): void {
+		const footer = container.createDiv({cls: "rpg-audio-sidebar-footer"});
+		footer.createSpan({
+			cls: "rpg-audio-sidebar-version",
+			text: `v${this.plugin.manifest.version}`,
+		});
+		const settingsBtn = footer.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
+		setIcon(settingsBtn, "settings");
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
+		settingsBtn.setAttribute("aria-label", "Open RPG Audio settings");
+		settingsBtn.addEventListener("click", () => this.openSettings());
 	}
 
 	private renderAll(): void {
@@ -259,6 +286,26 @@ export class RpgAudioSidebarView extends ItemView {
 			btn.setAttribute("aria-label", "Fade out");
 			btn.addClass("rpg-audio-btn-disabled");
 		}
+	}
+
+	private updateAutoplayBtn(): void {
+		if (!this.autoplayBtn) return;
+		const on = this.manager.allowAutoplay;
+		setIcon(this.autoplayBtn, on ? "zap" : "zap-off");
+		this.autoplayBtn.setAttribute("aria-label", on ? "Autoplay enabled (click to disable)" : "Autoplay disabled (click to enable)");
+		this.autoplayBtn.toggleClass("is-active", on);
+	}
+
+	private async toggleAutoplay(): Promise<void> {
+		this.plugin.settings.allowAutoplay = !this.plugin.settings.allowAutoplay;
+		this.manager.allowAutoplay = this.plugin.settings.allowAutoplay;
+		await this.plugin.saveSettings();
+	}
+
+	private openSettings(): void {
+		const setting = (this.plugin.app as unknown as { setting: { open: () => void; openTabById: (id: string) => void } }).setting;
+		setting.open();
+		setting.openTabById(this.plugin.manifest.id);
 	}
 
 	private updateFadeButtons(): void {

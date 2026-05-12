@@ -11,6 +11,7 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 	let type = "";
 	let loop = false;
 	let random = false;
+	let autoplay = false;
 	let stops: string[] = [];
 	let starts: string[] = [];
 	let pauses: string[] = [];
@@ -49,6 +50,9 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 			case "random":
 				random = value === "true";
 				break;
+			case "autoplay":
+				autoplay = value === "true";
+				break;
 			case "stops":
 				if (value) {
 					stops = value.split(",").map(s => s.trim()).filter(s => s.length > 0);
@@ -77,7 +81,7 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 
 	if (!type) type = files.length > 1 ? "playlist" : "sfx";
 
-	return {id, name, type, files, loop, random, stops, starts, pauses};
+	return {id, name, type, files, loop, random, autoplay, stops, starts, pauses};
 }
 
 export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
@@ -94,6 +98,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	}
 
 	onload(): void {
+		const wasRegistered = !!this.manager.getTrack(this.def.id);
 		this.manager.register(this.def);
 		this.buildUI();
 
@@ -104,6 +109,10 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.eventRef = () => this.manager.off(EVENT_TRACK_CHANGED, handler);
 
 		this.syncState();
+
+		if (this.def.autoplay && !wasRegistered && this.manager.allowAutoplay) {
+			void this.manager.play(this.def.id);
+		}
 
 		// Obsidian does not call onunload for MarkdownRenderChild inside
 		// ![[...]] transclusions. Poll for DOM detachment as a fallback.

@@ -150,7 +150,10 @@
 /* Sidebar */
 .rpg-audio-sidebar {
 	padding: 0;
-	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
 }
 
 .rpg-audio-sidebar-header {
@@ -204,6 +207,28 @@
 
 .rpg-audio-sidebar-content {
 	padding: 8px 12px;
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.rpg-audio-sidebar-footer {
+	padding: 6px 12px;
+	border-top: 1px solid var(--background-modifier-border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	opacity: 0.6;
+	transition: opacity 0.15s ease;
+}
+
+.rpg-audio-sidebar-footer:hover {
+	opacity: 1;
+}
+
+.rpg-audio-sidebar-version {
+	font-size: 0.8em;
+	color: var(--text-muted);
 }
 
 .rpg-audio-sidebar-section {
