@@ -63,9 +63,9 @@ This renders an inline player widget with play/pause, stop, and volume controls.
 | `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
 | `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
 | `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on — otherwise tracks marked `autoplay: true` stay silent until you press play. Existing `stops`/`pauses`/`resumes` rules still apply, so autoplaying tracks of the same exclusive type will swap cleanly. Defaults to `false`. |
-| `stops`     | No   | Comma-separated list of types **or track IDs** to stop when this track starts playing (e.g. `music, ambience`, or `crowd-ambience` to target one specific track). If a crossfade duration is configured, the outgoing tracks fade out. |
-| `pauses`    | No   | Comma-separated list of types **or track IDs** to pause when this track starts playing (e.g. `ambience`, or `tavern-music`). Like `stops`, but paused tracks keep their position and can be resumed later. Fades out if crossfade is configured. |
-| `resumes`   | No   | Comma-separated list of types **or track IDs** to resume when this track starts playing (e.g. `ambience`, or `crowd-ambience`). Only affects tracks that are currently paused — stopped tracks are not started. Fades in if crossfade is configured. Accepts `starts:` as a deprecated alias. |
+| `stops`     | No   | Comma-separated list of types **or track IDs** to stop when this track starts playing (e.g. `music, ambience`, or `crowd-ambience` to target one specific track). Prefix a token with `!` to exclude (e.g. `stops: ambient, !crowd-ambience` = stop all ambient tracks except `crowd-ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
+| `pauses`    | No   | Comma-separated list of types **or track IDs** to pause when this track starts playing (e.g. `ambience`, or `tavern-music`). Supports `!` exclusions (see `stops`). Like `stops`, but paused tracks keep their position and can be resumed later. Fades out if crossfade is configured. |
+| `resumes`   | No   | Comma-separated list of types **or track IDs** to resume when this track starts playing (e.g. `ambience`, or `crowd-ambience`). Supports `!` exclusions (see `stops`). Only affects tracks that are currently paused — stopped tracks are not started. Fades in if crossfade is configured. Accepts `starts:` as a deprecated alias. |
 | `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
 | `files` | \*       | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
 
@@ -197,6 +197,35 @@ file: audio/sfx/door-close.mp3
 ````
 
 Play "Outside Ambience", then hit "Enter House" — the ambience pauses (with fade-out if crossfade is on). Later, hit "Exit House" and the ambience picks up right where it left off (with fade-in).
+
+**Broad targeting with exceptions:**
+
+Useful when a note has its own paired ambient track and wants to clear out any ambient leftovers from elsewhere — but obviously not its own.
+
+````markdown
+```rpg-audio
+id: district-market
+name: Market District Loop
+type: location
+stops: location, ambient, !district-market-crowd
+autoplay: true
+loop: true
+file: audio/locations/market.mp3
+```
+````
+
+````markdown
+```rpg-audio
+id: district-market-crowd
+name: Market Crowd Ambient
+type: ambient
+autoplay: true
+loop: true
+file: audio/ambience/crowd.mp3
+```
+````
+
+When the note is opened, both blocks autoplay. The location block's `stops: location, ambient, !district-market-crowd` kills any other location loop and any leftover ambient from previously-visited notes — but spares the market's own crowd ambient. Tokens prefixed with `!` are exclusions and can refer to a `type:` or `id:`.
 
 ## Sidebar
 

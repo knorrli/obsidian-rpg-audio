@@ -12,7 +12,16 @@ import {
 import { FadeEngine } from "./fade-engine";
 
 function matchesDirective(tokens: string[], otherId: string, otherType: string): boolean {
-	return tokens.includes(otherType) || tokens.includes(otherId);
+	let matched = false;
+	for (const token of tokens) {
+		if (token.startsWith("!")) {
+			const negated = token.slice(1);
+			if (negated === otherType || negated === otherId) return false;
+		} else if (token === otherType || token === otherId) {
+			matched = true;
+		}
+	}
+	return matched;
 }
 
 export class AudioManager extends Events {
