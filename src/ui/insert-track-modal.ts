@@ -205,7 +205,7 @@ export class InsertTrackModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Scope")
-			.setDesc("Comma-separated context labels. Playing a track stops other-scope tracks (e.g. tavern, outdoors)")
+			.setDesc("Comma-separated context labels — playing a track stops other-scope tracks")
 			.addText(text => text
 				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setPlaceholder("tavern, outdoors")
