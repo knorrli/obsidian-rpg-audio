@@ -46,6 +46,7 @@ export class AudioManager extends Events {
 	private gainNodes: Map<string, GainNode> = new Map();
 	private audioContext: AudioContext | null = null;
 	private orphanTimers: Map<string, number> = new Map();
+	private unregistering: Set<string> = new Set();
 	private _masterVolume = 1.0;
 	private _audioFolder = "";
 	private fades = new FadeEngine();
@@ -201,24 +202,32 @@ export class AudioManager extends Events {
 	}
 
 	unregister(id: string): void {
-		this.fades.cancel(id);
-		this.fadeMultipliers.delete(id);
-		this.playFades.delete(id);
-		this.stop(id);
-		const el = this.audioElements.get(id);
-		if (el) {
-			el.pause();
-			el.removeAttribute("src");
-			el.load();
-			this.audioElements.delete(id);
+		// Break the stop → cleanupIfOrphaned → unregister → stop recursion: the
+		// inner unregister returns here while the outer one finishes the teardown.
+		if (this.unregistering.has(id)) return;
+		this.unregistering.add(id);
+		try {
+			this.fades.cancel(id);
+			this.fadeMultipliers.delete(id);
+			this.playFades.delete(id);
+			this.stop(id);
+			const el = this.audioElements.get(id);
+			if (el) {
+				el.pause();
+				el.removeAttribute("src");
+				el.load();
+				this.audioElements.delete(id);
+			}
+			const gain = this.gainNodes.get(id);
+			if (gain) {
+				gain.disconnect();
+				this.gainNodes.delete(id);
+			}
+			this.tracks.delete(id);
+			this.trigger(EVENT_TRACKS_UPDATED);
+		} finally {
+			this.unregistering.delete(id);
 		}
-		const gain = this.gainNodes.get(id);
-		if (gain) {
-			gain.disconnect();
-			this.gainNodes.delete(id);
-		}
-		this.tracks.delete(id);
-		this.trigger(EVENT_TRACKS_UPDATED);
 	}
 
 	async play(id: string, skipPlayFadeIn = false, cause?: CauseInput): Promise<void> {
@@ -584,6 +593,7 @@ export class AudioManager extends Events {
 		this.fades.destroy();
 		this.fadeMultipliers.clear();
 		this.playFades.clear();
+		this.unregistering.clear();
 		this._activeScope.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
