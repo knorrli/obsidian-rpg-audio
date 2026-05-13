@@ -9,18 +9,20 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 
 - **Inline players** — add `rpg-audio` code blocks to any note and get play/pause, stop, and volume controls right next to your encounter text
 - **Sidebar** — a dedicated panel showing all tracks grouped by type, with global and per-group fade controls
-- **Crossfade** — tracks with `stops:`, `pauses:`, or `resumes:` automatically crossfade between each other (configurable duration, or instant)
+- **Scene transitions via `scope:`** — label tracks with one or more context tags; playing a scoped track automatically stops tracks from other scopes
+- **Crossfade** — exclusive transitions fade smoothly (configurable duration, or instant)
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
 - **Autoplay** — mark tracks with `autoplay: true` and they start playing as soon as their note opens or is shown in a hover popover. Gated by a sidebar toggle so prep stays silent and you only flip it on at the start of a session
-- **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax. Pick files from a fuzzy search, set type/loop/random, and insert the block at your cursor
+- **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax
+- **Debug overlay** — optional sidebar toggle that shows each track's last event and the active scope set, useful when audio behaves unexpectedly
 
 ## Use cases
 
 - **GMs who prep in Obsidian** — embed audio controls right next to your encounter notes. When the party enters the tavern, hit play without alt-tabbing.
 - **Layered soundscapes** — run rain ambience, tavern chatter, and a bard's tune simultaneously, each with its own volume.
-- **One-click scene transitions** — use `stops:` to crossfade from exploration music to battle music with a single button press. Use `pauses:` and `resumes:` for temporary transitions that resume where they left off.
+- **Scene-based audio** — tag tracks by location or context with `scope:`. Switching scenes is a single click and the previous scene's audio steps aside automatically.
 - **Solo RPG / journaling** — set the mood for your solo sessions.
 
 ## Quick start
@@ -39,52 +41,9 @@ file: audio/tavern.mp3
 
 3. Switch to reading mode — hit play
 
-## Usage
+## Common patterns
 
-Add an `rpg-audio` fenced code block to any note to create an audio player:
-
-````markdown
-```rpg-audio
-id: tavern-music
-name: Tavern Music
-file: audio/tavern-ambience.mp3
-```
-````
-
-This renders an inline player widget with play/pause, stop, and volume controls.
-
-### Fields
-
-| Field   | Required | Description |
-|---------|----------|-------------|
-| `id`    | Yes      | Unique identifier for the track. Used internally to manage playback state. |
-| `name`  | Yes      | Display name shown in the player widget and sidebar. |
-| `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
-| `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
-| `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
-| `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on — otherwise tracks marked `autoplay: true` stay silent until you press play. Existing `stops`/`pauses`/`resumes` rules still apply, so autoplaying tracks of the same exclusive type will swap cleanly. Defaults to `false`. |
-| `stops`     | No   | Comma-separated list of types **or track IDs** to stop when this track starts playing (e.g. `music, ambience`, or `crowd-ambience` to target one specific track). Prefix a token with `!` to exclude (e.g. `stops: ambient, !crowd-ambience` = stop all ambient tracks except `crowd-ambience`). If a crossfade duration is configured, the outgoing tracks fade out. |
-| `pauses`    | No   | Comma-separated list of types **or track IDs** to pause when this track starts playing (e.g. `ambience`, or `tavern-music`). Supports `!` exclusions (see `stops`). Like `stops`, but paused tracks keep their position and can be resumed later. Fades out if crossfade is configured. |
-| `resumes`   | No   | Comma-separated list of types **or track IDs** to resume when this track starts playing (e.g. `ambience`, or `crowd-ambience`). Supports `!` exclusions (see `stops`). Only affects tracks that are currently paused — stopped tracks are not started. Fades in if crossfade is configured. Accepts `starts:` as a deprecated alias. |
-| `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
-| `files` | \*       | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
-
-\* At least one `file` or `files` entry is required.
-
-### Examples
-
-**Sound effect (one-shot):**
-
-````markdown
-```rpg-audio
-id: thunder
-name: Thunder Clap
-type: sfx
-file: audio/sfx/thunder.mp3
-```
-````
-
-**Looping ambience:**
+### A single looping track
 
 ````markdown
 ```rpg-audio
@@ -96,75 +55,129 @@ file: audio/ambience/rain.mp3
 ```
 ````
 
-**Playlist:**
+### A layered scene (music + ambience + sfx)
 
-````markdown
-```rpg-audio
-id: battle-music
-name: Battle Music
-type: playlist
-loop: true
-files:
-- audio/music/battle-01.mp3
-- audio/music/battle-02.mp3
-- audio/music/battle-03.mp3
-```
-````
-
-Add `loop: true` to play through all tracks in order and repeat. Without it, only one track plays and stops.
-
-**Shuffled playlist:**
-
-````markdown
-```rpg-audio
-id: battle-music
-name: Battle Music
-type: playlist
-loop: true
-random: true
-files:
-- audio/music/battle-01.mp3
-- audio/music/battle-02.mp3
-- audio/music/battle-03.mp3
-```
-````
-
-With `random: true`, playback starts on a random track and shuffles to a different track each time one ends. Resuming from pause keeps the current track.
-
-**Randomized sound effect (one-shot):**
-
-````markdown
-```rpg-audio
-id: sword-hit
-name: Sword Hit
-type: sfx
-random: true
-loop: false
-files:
-- audio/sfx/sword-hit-01.mp3
-- audio/sfx/sword-hit-02.mp3
-- audio/sfx/sword-hit-03.mp3
-```
-````
-
-With `random: true` and `loop: false`, each press of play triggers a random sound from the list. Great for varied sound effects.
-
-**Music tracks that stop other music (only one plays at a time):**
+Define multiple tracks in the same note. They share controls but play independently, each with its own volume.
 
 ````markdown
 ```rpg-audio
 id: tavern-music
 name: Tavern Music
 type: music
-stops: music
 loop: true
 file: audio/music/tavern.mp3
 ```
+
+```rpg-audio
+id: tavern-chatter
+name: Tavern Chatter
+type: ambience
+loop: true
+file: audio/ambience/tavern-chatter.mp3
+```
+
+```rpg-audio
+id: door-creak
+name: Door Creak
+type: sfx
+file: audio/sfx/door-creak.mp3
+```
 ````
 
-With `stops: music`, starting this track will automatically stop any other playing track that has `type: music`. You can list multiple types separated by commas (e.g. `stops: music, ambience`). If a crossfade duration is configured in settings, the outgoing tracks fade out while the new one fades in.
+### Scene transitions with `scope:`
 
-**Scene transitions with pause/resume:**
+`scope:` is a comma-separated list of context labels (any strings you choose). When a scoped track starts playing, the engine sets the **active scope** to that track's labels and stops any other playing track whose scope isn't a subset of the new active set. Tracks with the same scope coexist; tracks without a `scope:` are unaffected by transitions.
+
+````markdown
+```rpg-audio
+id: tavern-music
+name: Tavern Music
+type: music
+scope: tavern
+loop: true
+file: audio/music/tavern.mp3
+```
+
+```rpg-audio
+id: tavern-amb
+name: Tavern Ambience
+type: ambience
+scope: tavern
+loop: true
+file: audio/ambience/tavern-chatter.mp3
+```
+
+```rpg-audio
+id: forest-music
+name: Forest Music
+type: music
+scope: forest
+loop: true
+file: audio/music/forest.mp3
+```
+````
+
+Starting `tavern-music` plays alongside `tavern-amb` (same scope). When you later trigger `forest-music`, both tavern tracks stop automatically — no per-track directives needed.
+
+Multi-scope is supported: `scope: outdoors, district-1` means the track belongs to *both* contexts. It keeps playing as long as every label it claims is part of the active scope. So a track scoped `outdoors` survives transitions between any `outdoors, …` scopes (handy for weather beds and region-spanning atmospheres).
+
+### Playlists
+
+````markdown
+```rpg-audio
+id: battle-music
+name: Battle Music
+type: playlist
+loop: true
+files:
+- audio/music/battle-01.mp3
+- audio/music/battle-02.mp3
+- audio/music/battle-03.mp3
+```
+````
+
+Add `random: true` to shuffle. Without `loop: true`, only one track plays and stops — paired with `random: true` this gives you a varied one-shot SFX (e.g. sword hits).
+
+## Sidebar
+
+Click the music note icon in the ribbon (or run the **Toggle audio sidebar** command) to open a sidebar panel. The sidebar shows:
+
+- **Global controls** — Fade In All, Fade Out All, and Stop All buttons
+- **Master volume slider** — controls the global volume for all tracks
+- **Tracks grouped by type** — collapsible sections for each type (music, ambience, sfx, etc.)
+- **Per-group fade controls** — fade in or fade out all tracks of a specific type
+- **Per-track controls** — play/pause, stop, and volume slider for each track
+- **Playlist status** — current position for multi-file tracks (e.g. "Playing 2/5")
+- **Debug toggle** — bug icon in the footer reveals scope labels, last-event info per track, and the active scope set
+
+## Field reference
+
+| Field   | Required | Description |
+|---------|----------|-------------|
+| `id`    | Yes      | Unique identifier for the track. Used internally to manage playback state. |
+| `name`  | Yes      | Display name shown in the player widget and sidebar. |
+| `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
+| `scope` | No       | Comma-separated context labels (e.g. `tavern` or `outdoors, district-1`). Playing a scoped track stops other-scope tracks. See [Scene transitions with scope](#scene-transitions-with-scope). |
+| `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
+| `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
+| `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on. Defaults to `false`. |
+| `stops`     | No   | Comma-separated list of types or track IDs to stop when this track starts playing. Prefix a token with `!` to exclude. See [Advanced directives](#advanced-directives). |
+| `pauses`    | No   | Like `stops`, but paused tracks keep their position and can be resumed later. |
+| `resumes`   | No   | Comma-separated list of types or track IDs to resume when this track starts. Only affects tracks that are currently paused. |
+| `file`  | \*       | Path to a single audio file, relative to the vault root (e.g. `audio/thunder.mp3`). |
+| `files` | \*       | A list of audio files (one per line, prefixed with `- `). Files play in order as a playlist. |
+
+\* At least one `file` or `files` entry is required.
+
+## Advanced directives
+
+Most scene-transition use cases are covered by `scope:`. The `stops:` / `pauses:` / `resumes:` directives remain useful for:
+
+- **One-shot SFX that pauses background audio** — a door-open sfx that pauses ambience until a matching door-close sfx resumes it. This needs explicit pause/resume because you want resume-from-position behavior, which scope's stop semantics don't provide.
+- **Cross-cutting exceptions** — silence a global music bed during a dramatic NPC theme without giving the bed a scope.
+- **Surgical per-id targeting** — `stops: <some-id>` to stop one specific track when this one plays.
+
+### Pause-and-resume SFX example
 
 ````markdown
 ```rpg-audio
@@ -174,9 +187,7 @@ type: ambience
 loop: true
 file: audio/ambience/forest.mp3
 ```
-````
 
-````markdown
 ```rpg-audio
 id: enter-house
 name: Enter House
@@ -184,9 +195,7 @@ type: sfx
 pauses: ambience
 file: audio/sfx/door-open.mp3
 ```
-````
 
-````markdown
 ```rpg-audio
 id: exit-house
 name: Exit House
@@ -196,55 +205,19 @@ file: audio/sfx/door-close.mp3
 ```
 ````
 
-Play "Outside Ambience", then hit "Enter House" — the ambience pauses (with fade-out if crossfade is on). Later, hit "Exit House" and the ambience picks up right where it left off (with fade-in).
+Play "Outside Ambience", then hit "Enter House" — the ambience pauses. Later, hit "Exit House" and the ambience picks up where it left off.
 
-**Broad targeting with exceptions:**
+### Negation
 
-Useful when a note has its own paired ambient track and wants to clear out any ambient leftovers from elsewhere — but obviously not its own.
-
-````markdown
-```rpg-audio
-id: district-market
-name: Market District Loop
-type: location
-stops: location, ambient, !district-market-crowd
-autoplay: true
-loop: true
-file: audio/locations/market.mp3
-```
-````
-
-````markdown
-```rpg-audio
-id: district-market-crowd
-name: Market Crowd Ambient
-type: ambient
-autoplay: true
-loop: true
-file: audio/ambience/crowd.mp3
-```
-````
-
-When the note is opened, both blocks autoplay. The location block's `stops: location, ambient, !district-market-crowd` kills any other location loop and any leftover ambient from previously-visited notes — but spares the market's own crowd ambient. Tokens prefixed with `!` are exclusions and can refer to a `type:` or `id:`.
-
-## Sidebar
-
-Click the music note icon in the ribbon (or run the **Toggle audio sidebar** command) to open a sidebar panel. The sidebar shows:
-
-- **Global controls** — Fade In All, Fade Out All, and Stop All buttons
-- **Master volume slider** — controls the global volume for all tracks
-- **Tracks grouped by type** — collapsible sections for each type (music, ambience, sfx, etc.)
-- **Per-group fade controls** — fade in or fade out all tracks of a specific type (e.g. fade out all ambience while keeping music playing)
-- **Per-track controls** — play/pause, stop, and volume slider for each track
-- **Playlist status** — shows current position for multi-file tracks (e.g. "Playing 2/5")
+Prefix a token with `!` to exclude it. Example: `stops: ambient, !crowd-ambient` stops every track of type `ambient` except the one with id `crowd-ambient`. With `scope:` available, negation is rarely needed for scene transitions, but it remains useful for the cross-cutting cases above.
 
 ## Tips
 
-- Use `stops: music` on all your music tracks so only one plays at a time — switching scenes is a single click
-- Use `pauses:` and `resumes:` for temporary scene changes (e.g. entering/leaving a building) where you want audio to resume from where it left off
-- Keep ambience and SFX as separate types so you can fade out ambience without killing sound effects
-- Organize your audio folder by type: `audio/music/`, `audio/ambience/`, `audio/sfx/`
-- File paths can be absolute from the vault root (`audio/music/tavern.mp3`) or relative to the configured audio folder (`music/tavern.mp3`)
+- Reach for `scope:` first when you want "playing a track means switching to its scene." Reach for `stops:` / `pauses:` / `resumes:` for explicit one-shot transitions or cross-cutting exceptions.
+- Keep ambience and SFX as separate types so you can fade out ambience without killing sound effects.
+- Organize your audio folder by type: `audio/music/`, `audio/ambience/`, `audio/sfx/`.
+- File paths can be absolute from the vault root (`audio/music/tavern.mp3`) or relative to the configured audio folder (`music/tavern.mp3`).
+- When something behaves unexpectedly, toggle the debug bug icon in the sidebar footer to see why each track is in its current state.
 
 ## Settings
 
@@ -258,7 +231,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 
 - **Toggle audio sidebar** — show or hide the audio sidebar panel.
 - **Stop all audio** — stop all currently playing tracks.
-- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor. Lets you set the name, type, files (via fuzzy search), loop, random, autoplay, and advanced options (stops/pauses/resumes) through a form instead of writing YAML by hand.
+- **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor.
 
 ## Caveats
 
@@ -267,11 +240,11 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 ## Limitations
 
 - **Mobile/tablet volume sliders** — on mobile and tablet, dragging volume sliders in editing mode may conflict with Obsidian's swipe-to-open-sidebar gesture. Switch to reading mode for smoother slider control.
-- **Local files only** — plays audio from your vault, not streaming services or URLs
-- **No seek/scrubber** — play, pause, and stop only; no jumping to a specific timestamp
-- **No weighted random** — `random: true` gives each track equal probability; no way to bias towards specific tracks
-- **No persistent state** — playback resets when Obsidian restarts
-- **Supported formats** — depends on Electron's audio engine; MP3, OGG, WAV, FLAC, and AAC generally work
+- **Local files only** — plays audio from your vault, not streaming services or URLs.
+- **No seek/scrubber** — play, pause, and stop only; no jumping to a specific timestamp.
+- **No weighted random** — `random: true` gives each track equal probability; no way to bias towards specific tracks.
+- **No persistent state** — playback resets when Obsidian restarts.
+- **Supported formats** — depends on Electron's audio engine; MP3, OGG, WAV, FLAC, and AAC generally work.
 
 ## Installation
 
