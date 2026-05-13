@@ -224,6 +224,7 @@ Prefix a token with `!` to exclude it. Example: `stops: ambient, !crowd-ambient`
 - **Audio folder** — vault-relative folder where your audio files are stored (default: `audio`).
 - **Master volume** — global volume multiplier applied to all tracks.
 - **Auto-open sidebar** — automatically open the sidebar when the plugin loads.
+- **Autoplay delay** — duration in milliseconds to wait before an autoplay track actually starts (default: 0ms / instant). If the track unloads during the delay — for example a hover popover is dismissed before the timer fires — playback is cancelled. Useful when moving the mouse around a map with many marker popovers that would otherwise blast audio on every flicker.
 - **Crossfade duration** — duration in milliseconds of the crossfade between exclusive tracks (default: 2000ms). Set to 0 to disable crossfading and use hard stops.
 - **Play fade duration** — duration in milliseconds of the fade applied when starting, pausing, and resuming a track (default: 0ms / instant). Clicking play during a fade-out reverses into a fade-in (and vice versa).
 

@@ -53,6 +53,7 @@ export class AudioManager extends Events {
 	private fadeMultipliers: Map<string, number> = new Map();
 	private _crossfadeDuration = 0;
 	private _playFadeDuration = 0;
+	private _autoplayDelay = 0;
 	private _allowAutoplay = false;
 	private playFades: Map<string, "out" | "in"> = new Map();
 	private _activeScope: Set<string> = new Set();
@@ -103,6 +104,14 @@ export class AudioManager extends Events {
 
 	set playFadeDuration(value: number) {
 		this._playFadeDuration = value;
+	}
+
+	get autoplayDelay(): number {
+		return this._autoplayDelay;
+	}
+
+	set autoplayDelay(value: number) {
+		this._autoplayDelay = value;
 	}
 
 	get allowAutoplay(): boolean {

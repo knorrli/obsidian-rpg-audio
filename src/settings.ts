@@ -6,6 +6,7 @@ export interface RpgAudioSettings {
 	masterVolume: number;
 	autoOpenSidebar: boolean;
 	allowAutoplay: boolean;
+	autoplayDelay: number;
 	crossfadeDuration: number;
 	playFadeDuration: number;
 	showDebugInfo: boolean;
@@ -16,6 +17,7 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	masterVolume: 1.0,
 	autoOpenSidebar: true,
 	allowAutoplay: false,
+	autoplayDelay: 0,
 	crossfadeDuration: 2000,
 	playFadeDuration: 0,
 	showDebugInfo: false,
@@ -65,6 +67,19 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.autoOpenSidebar)
 				.onChange(async (value) => {
 					this.plugin.settings.autoOpenSidebar = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Autoplay delay")
+			.setDesc("Delay before an autoplay track starts. If the track unloads during the delay, for example when a hover popover is dismissed, playback is cancelled. Set to 0 for instant autoplay.")
+			.addSlider(slider => slider
+				.setLimits(0, 2000, 50)
+				.setValue(this.plugin.settings.autoplayDelay)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.autoplayDelay = value;
+					this.plugin.audioManager.autoplayDelay = value;
 					await this.plugin.saveSettings();
 				}));
 

@@ -103,6 +103,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private controls: PlayerControlsElements | null = null;
 	private statusEl: HTMLElement | null = null;
 	private eventRef: (() => void) | null = null;
+	private autoplayTimer: number | null = null;
 
 	constructor(containerEl: HTMLElement, manager: AudioManager, def: AudioTrackDef) {
 		super(containerEl);
@@ -124,7 +125,15 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.syncState();
 
 		if (this.def.autoplay && !wasRegistered && this.manager.allowAutoplay) {
-			void this.manager.play(this.def.id, false, {kind: "autoplay"});
+			const delay = this.manager.autoplayDelay;
+			if (delay > 0) {
+				this.autoplayTimer = window.setTimeout(() => {
+					this.autoplayTimer = null;
+					void this.manager.play(this.def.id, false, {kind: "autoplay"});
+				}, delay);
+			} else {
+				void this.manager.play(this.def.id, false, {kind: "autoplay"});
+			}
 		}
 
 		// Obsidian does not call onunload for MarkdownRenderChild inside
@@ -135,6 +144,10 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	}
 
 	onunload(): void {
+		if (this.autoplayTimer !== null) {
+			window.clearTimeout(this.autoplayTimer);
+			this.autoplayTimer = null;
+		}
 		if (this.eventRef) {
 			this.eventRef();
 			this.eventRef = null;

@@ -19,6 +19,7 @@ export default class RpgAudioPlugin extends Plugin {
 		this.audioManager.crossfadeDuration = this.settings.crossfadeDuration;
 		this.audioManager.playFadeDuration = this.settings.playFadeDuration;
 		this.audioManager.allowAutoplay = this.settings.allowAutoplay;
+		this.audioManager.autoplayDelay = this.settings.autoplayDelay;
 
 		this.registerView(SIDEBAR_VIEW_TYPE, (leaf) => new RpgAudioSidebarView(leaf, this));
 
