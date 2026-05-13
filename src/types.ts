@@ -18,12 +18,23 @@ export interface AudioTrackDef {
 	scope: string[];
 }
 
+export type TrackAction = "play" | "pause" | "stop" | "resume";
+export type TrackCauseKind = "user" | "directive" | "scope" | "autoplay" | "system" | "ended";
+
+export interface TrackCause {
+	action: TrackAction;
+	kind: TrackCauseKind;
+	detail?: string;
+	at: number;
+}
+
 export interface AudioTrackState {
 	def: AudioTrackDef;
 	playState: PlayState;
 	volume: number;
 	currentIndex: number;
 	error: string | null;
+	lastCause: TrackCause | null;
 }
 
 export const EVENT_TRACK_CHANGED = "track-changed";

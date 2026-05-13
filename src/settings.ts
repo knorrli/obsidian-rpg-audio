@@ -8,6 +8,7 @@ export interface RpgAudioSettings {
 	allowAutoplay: boolean;
 	crossfadeDuration: number;
 	playFadeDuration: number;
+	showDebugInfo: boolean;
 }
 
 export const DEFAULT_SETTINGS: RpgAudioSettings = {
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	allowAutoplay: false,
 	crossfadeDuration: 2000,
 	playFadeDuration: 0,
+	showDebugInfo: false,
 };
 
 export class RpgAudioSettingTab extends PluginSettingTab {

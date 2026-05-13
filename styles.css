@@ -216,14 +216,53 @@
 	padding: 6px 12px;
 	border-top: 1px solid var(--background-modifier-border);
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
+	flex-direction: column;
+	gap: 4px;
 	opacity: 0.6;
 	transition: opacity 0.15s ease;
 }
 
 .rpg-audio-sidebar-footer:hover {
 	opacity: 1;
+}
+
+.rpg-audio-sidebar-footer-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.rpg-audio-sidebar-active-scope {
+	font-size: 0.75em;
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+}
+
+.rpg-audio-sidebar-active-scope.is-hidden {
+	display: none;
+}
+
+.rpg-audio-sidebar-track-scope,
+.rpg-audio-sidebar-track-debug {
+	font-size: 0.72em;
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+	margin-top: 2px;
+	line-height: 1.3;
+}
+
+.rpg-audio-sidebar-track-scope.is-hidden,
+.rpg-audio-sidebar-track-debug.is-hidden {
+	display: none;
+}
+
+.rpg-audio-debug-label {
+	color: var(--text-faint);
+}
+
+.rpg-audio-debug-muted {
+	color: var(--text-faint);
+	font-style: italic;
 }
 
 .rpg-audio-sidebar-version {

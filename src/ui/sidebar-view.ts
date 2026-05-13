@@ -8,21 +8,31 @@ import {
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
 	EVENT_ALLOW_AUTOPLAY,
+	EVENT_ACTIVE_SCOPE_CHANGED,
 	AudioTrackState,
+	TrackCause,
 	MIN_FADE_DURATION_MS,
 } from "../types";
 import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
 
+function formatCause(cause: TrackCause): string {
+	const kindLabel = cause.kind === "user" ? "" : ` (${cause.kind})`;
+	const detail = cause.detail ? ` — ${cause.detail}` : "";
+	return `${cause.action}${kindLabel}${detail}`;
+}
+
 export class RpgAudioSidebarView extends ItemView {
 	private plugin: RpgAudioPlugin;
 	private manager: AudioManager;
-	private trackRows: Map<string, {rowEl: HTMLElement; controls: PlayerControlsElements; statusEl: HTMLElement}> = new Map();
+	private trackRows: Map<string, {rowEl: HTMLElement; controls: PlayerControlsElements; statusEl: HTMLElement; debugEl: HTMLElement; scopeEl: HTMLElement}> = new Map();
 	private contentArea: HTMLElement | null = null;
 	private masterSlider: HTMLInputElement | null = null;
 	private autoplayBtn: HTMLElement | null = null;
 	private collapsedGroups: Set<string> = new Set();
 	private globalFadeBtn: HTMLElement | null = null;
 	private typeFadeBtns: Map<string, HTMLElement> = new Map();
+	private debugToggleBtn: HTMLElement | null = null;
+	private activeScopeEl: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: RpgAudioPlugin) {
 		super(leaf);
@@ -70,6 +80,9 @@ export class RpgAudioSidebarView extends ItemView {
 		this.registerEvent(
 			this.manager.on(EVENT_ALLOW_AUTOPLAY, () => this.updateAutoplayBtn())
 		);
+		this.registerEvent(
+			this.manager.on(EVENT_ACTIVE_SCOPE_CHANGED, () => this.updateActiveScope())
+		);
 	}
 
 	async onClose(): Promise<void> {
@@ -79,6 +92,8 @@ export class RpgAudioSidebarView extends ItemView {
 		this.autoplayBtn = null;
 		this.globalFadeBtn = null;
 		this.typeFadeBtns.clear();
+		this.debugToggleBtn = null;
+		this.activeScopeEl = null;
 	}
 
 	private buildHeader(container: HTMLElement): void {
@@ -129,15 +144,56 @@ export class RpgAudioSidebarView extends ItemView {
 
 	private buildFooter(container: HTMLElement): void {
 		const footer = container.createDiv({cls: "rpg-audio-sidebar-footer"});
-		footer.createSpan({
+
+		this.activeScopeEl = footer.createDiv({cls: "rpg-audio-sidebar-active-scope"});
+		this.updateActiveScope();
+
+		const controls = footer.createDiv({cls: "rpg-audio-sidebar-footer-controls"});
+		controls.createSpan({
 			cls: "rpg-audio-sidebar-version",
 			text: `v${this.plugin.manifest.version}`,
 		});
-		const settingsBtn = footer.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
+
+		this.debugToggleBtn = controls.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
+		this.debugToggleBtn.addEventListener("click", () => void this.toggleDebug());
+		this.updateDebugBtn();
+
+		const settingsBtn = controls.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
 		setIcon(settingsBtn, "settings");
 		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		settingsBtn.setAttribute("aria-label", "Open RPG Audio settings");
 		settingsBtn.addEventListener("click", () => this.openSettings());
+	}
+
+	private updateDebugBtn(): void {
+		if (!this.debugToggleBtn) return;
+		const on = this.plugin.settings.showDebugInfo;
+		setIcon(this.debugToggleBtn, on ? "bug" : "bug-off");
+		this.debugToggleBtn.setAttribute("aria-label", on ? "Debug info on (click to disable)" : "Debug info off (click to enable)");
+		this.debugToggleBtn.toggleClass("is-active", on);
+	}
+
+	private async toggleDebug(): Promise<void> {
+		this.plugin.settings.showDebugInfo = !this.plugin.settings.showDebugInfo;
+		await this.plugin.saveSettings();
+		this.updateDebugBtn();
+		this.updateActiveScope();
+		this.renderAll();
+	}
+
+	private updateActiveScope(): void {
+		if (!this.activeScopeEl) return;
+		const on = this.plugin.settings.showDebugInfo;
+		this.activeScopeEl.empty();
+		if (!on) {
+			this.activeScopeEl.addClass("is-hidden");
+			return;
+		}
+		this.activeScopeEl.removeClass("is-hidden");
+		const scope = this.manager.activeScope;
+		const label = scope.length === 0 ? "(none)" : `{${scope.join(", ")}}`;
+		this.activeScopeEl.createSpan({cls: "rpg-audio-debug-label", text: "Active scope: "});
+		this.activeScopeEl.createSpan({text: label});
 	}
 
 	private renderAll(): void {
@@ -242,7 +298,11 @@ export class RpgAudioSidebarView extends ItemView {
 		const statusEl = row.createDiv({cls: "rpg-audio-status"});
 		this.setStatusText(statusEl, track);
 
-		this.trackRows.set(track.def.id, {rowEl: row, controls, statusEl});
+		const scopeEl = row.createDiv({cls: "rpg-audio-sidebar-track-scope"});
+		const debugEl = row.createDiv({cls: "rpg-audio-sidebar-track-debug"});
+		this.updateDebugEls(scopeEl, debugEl, track);
+
+		this.trackRows.set(track.def.id, {rowEl: row, controls, statusEl, debugEl, scopeEl});
 	}
 
 	private updateTrackRow(id: string): void {
@@ -254,6 +314,33 @@ export class RpgAudioSidebarView extends ItemView {
 		updatePlayPauseButton(row.controls.playPauseBtn, state.playState);
 		row.controls.volumeSlider.value = String(state.volume);
 		this.setStatusText(row.statusEl, state);
+		this.updateDebugEls(row.scopeEl, row.debugEl, state);
+	}
+
+	private updateDebugEls(scopeEl: HTMLElement, debugEl: HTMLElement, track: AudioTrackState): void {
+		const on = this.plugin.settings.showDebugInfo;
+		scopeEl.empty();
+		debugEl.empty();
+		if (!on) {
+			scopeEl.addClass("is-hidden");
+			debugEl.addClass("is-hidden");
+			return;
+		}
+		scopeEl.removeClass("is-hidden");
+		debugEl.removeClass("is-hidden");
+
+		if (track.def.scope.length > 0) {
+			scopeEl.createSpan({cls: "rpg-audio-debug-label", text: "scope: "});
+			scopeEl.createSpan({text: track.def.scope.join(", ")});
+		} else {
+			scopeEl.createSpan({cls: "rpg-audio-debug-muted", text: "no scope"});
+		}
+
+		if (track.lastCause) {
+			debugEl.setText(formatCause(track.lastCause));
+		} else {
+			debugEl.createSpan({cls: "rpg-audio-debug-muted", text: "no events yet"});
+		}
 	}
 
 	private hasPlayingTracks(): boolean {

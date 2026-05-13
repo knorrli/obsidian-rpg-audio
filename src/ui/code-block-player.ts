@@ -124,7 +124,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.syncState();
 
 		if (this.def.autoplay && !wasRegistered && this.manager.allowAutoplay) {
-			void this.manager.play(this.def.id);
+			void this.manager.play(this.def.id, false, {kind: "autoplay"});
 		}
 
 		// Obsidian does not call onunload for MarkdownRenderChild inside

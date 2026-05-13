@@ -3,6 +3,9 @@ import {
 	AudioTrackDef,
 	AudioTrackState,
 	PlayState,
+	TrackCause,
+	TrackCauseKind,
+	TrackAction,
 	EVENT_TRACK_CHANGED,
 	EVENT_TRACKS_UPDATED,
 	EVENT_MASTER_VOLUME,
@@ -11,6 +14,17 @@ import {
 	ORPHAN_CHECK_DELAY_MS,
 } from "./types";
 import { FadeEngine } from "./fade-engine";
+
+type CauseInput = {kind: TrackCauseKind; detail?: string};
+
+function buildCause(action: TrackAction, input: CauseInput | undefined): TrackCause {
+	return {
+		action,
+		kind: input?.kind ?? "user",
+		detail: input?.detail,
+		at: Date.now(),
+	};
+}
 
 function matchesDirective(tokens: string[], otherId: string, otherType: string): boolean {
 	let matched = false;
@@ -146,11 +160,15 @@ export class AudioManager extends Events {
 			if (other.playState !== PlayState.Playing) continue;
 			if (this.isScopeSubset(other.def.scope, newActive)) continue;
 
+			const scopeCause: CauseInput = {
+				kind: "scope",
+				detail: `scope changed to {${Array.from(newActive).join(", ")}} by ${triggerId}`,
+			};
 			if (this._crossfadeDuration > 0) {
-				this.fadeOutAndStop(otherId, this._crossfadeDuration);
+				this.fadeOutAndStop(otherId, this._crossfadeDuration, scopeCause);
 				crossfaded = true;
 			} else {
-				this.stop(otherId);
+				this.stop(otherId, scopeCause);
 			}
 		}
 
@@ -179,6 +197,7 @@ export class AudioManager extends Events {
 			volume: 1.0,
 			currentIndex: 0,
 			error: null,
+			lastCause: null,
 		});
 		this.trigger(EVENT_TRACKS_UPDATED);
 	}
@@ -205,7 +224,7 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACKS_UPDATED);
 	}
 
-	async play(id: string, skipPlayFadeIn = false): Promise<void> {
+	async play(id: string, skipPlayFadeIn = false, cause?: CauseInput): Promise<void> {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
@@ -222,11 +241,12 @@ export class AudioManager extends Events {
 		if (state.def.stops.length > 0) {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && matchesDirective(state.def.stops, otherId, other.def.type) && other.playState === PlayState.Playing) {
+					const directiveCause: CauseInput = {kind: "directive", detail: `stops from ${id}`};
 					if (this._crossfadeDuration > 0) {
-						this.fadeOutAndStop(otherId, this._crossfadeDuration);
+						this.fadeOutAndStop(otherId, this._crossfadeDuration, directiveCause);
 						crossfading = true;
 					} else {
-						this.stop(otherId);
+						this.stop(otherId, directiveCause);
 					}
 				}
 			}
@@ -235,10 +255,11 @@ export class AudioManager extends Events {
 		if (state.def.pauses.length > 0) {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && matchesDirective(state.def.pauses, otherId, other.def.type) && other.playState === PlayState.Playing) {
+					const directiveCause: CauseInput = {kind: "directive", detail: `pauses from ${id}`};
 					if (this._crossfadeDuration > 0) {
-						this.fadeOutAndPause(otherId, this._crossfadeDuration);
+						this.fadeOutAndPause(otherId, this._crossfadeDuration, directiveCause);
 					} else {
-						this.pause(otherId, false);
+						this.pause(otherId, false, directiveCause);
 					}
 				}
 			}
@@ -247,14 +268,15 @@ export class AudioManager extends Events {
 		if (state.def.resumes.length > 0) {
 			for (const [otherId, other] of this.tracks) {
 				if (otherId !== id && matchesDirective(state.def.resumes, otherId, other.def.type) && other.playState === PlayState.Paused) {
+					const resumeCause: CauseInput = {kind: "directive", detail: `resumes from ${id}`};
 					if (this._crossfadeDuration > 0) {
-						this.play(otherId, true).then(() => {
+						this.play(otherId, true, resumeCause).then(() => {
 							this.fadeIn(otherId, this._crossfadeDuration);
 						}).catch((e) => {
 							console.error(`RPG Audio: resumes fade-in failed for "${otherId}"`, e);
 						});
 					} else {
-						void this.play(otherId);
+						void this.play(otherId, false, resumeCause);
 					}
 				}
 			}
@@ -296,10 +318,12 @@ export class AudioManager extends Events {
 			el.loop = state.def.loop && state.def.files.length === 1;
 		}
 
+		const wasPaused = state.playState === PlayState.Paused;
 		try {
 			await el.play();
 			state.playState = PlayState.Playing;
 			state.error = null;
+			state.lastCause = buildCause(wasPaused ? "resume" : "play", cause);
 			if (useCrossfadeIn) {
 				this.fadeIn(id, this._crossfadeDuration);
 			} else if (usePlayFadeIn) {
@@ -317,7 +341,7 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	pause(id: string, fromUserToggle = true): void {
+	pause(id: string, fromUserToggle = true, cause?: CauseInput): void {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
@@ -327,20 +351,20 @@ export class AudioManager extends Events {
 			return;
 		}
 		if (fadeMode === "in") {
-			this.startPlayFadeOut(id);
+			this.startPlayFadeOut(id, cause);
 			return;
 		}
 
 		if (state.playState !== PlayState.Playing) return;
 
 		if (this._playFadeDuration > 0) {
-			this.startPlayFadeOut(id);
+			this.startPlayFadeOut(id, cause);
 		} else {
-			this.applyPause(id);
+			this.applyPause(id, cause);
 		}
 	}
 
-	private applyPause(id: string): void {
+	private applyPause(id: string, cause?: CauseInput): void {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
@@ -351,13 +375,14 @@ export class AudioManager extends Events {
 		this.fadeMultipliers.delete(id);
 		this.applyVolume(id);
 		state.playState = PlayState.Paused;
+		state.lastCause = buildCause("pause", cause);
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	private startPlayFadeOut(id: string): void {
+	private startPlayFadeOut(id: string, cause?: CauseInput): void {
 		const current = this.fadeMultipliers.get(id) ?? 1;
 		if (current <= 0) {
-			this.applyPause(id);
+			this.applyPause(id, cause);
 			return;
 		}
 		this.playFades.set(id, "out");
@@ -368,7 +393,7 @@ export class AudioManager extends Events {
 		}).then((completed) => {
 			if (this.playFades.get(id) !== "out") return;
 			if (completed) {
-				this.applyPause(id);
+				this.applyPause(id, cause);
 			} else {
 				this.playFades.delete(id);
 			}
@@ -402,7 +427,7 @@ export class AudioManager extends Events {
 		});
 	}
 
-	stop(id: string): void {
+	stop(id: string, cause?: CauseInput): void {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
@@ -419,6 +444,7 @@ export class AudioManager extends Events {
 		state.playState = PlayState.Stopped;
 		state.currentIndex = 0;
 		state.error = null;
+		state.lastCause = buildCause("stop", cause);
 		this.trigger(EVENT_TRACK_CHANGED, id);
 		this.cleanupIfOrphaned(id);
 	}
@@ -428,11 +454,12 @@ export class AudioManager extends Events {
 		this.fadeMultipliers.clear();
 		this.playFades.clear();
 		for (const [id] of this.tracks) {
-			this.stop(id);
+			this.stop(id, {kind: "user", detail: "stop all"});
 		}
 	}
 
 	fadeOutAll(duration: number): void {
+		const cause: CauseInput = {kind: "system", detail: "fade out all"};
 		for (const [id, state] of this.tracks) {
 			if (state.playState === PlayState.Playing) {
 				const current = this.fadeMultipliers.get(id) ?? 1;
@@ -441,7 +468,7 @@ export class AudioManager extends Events {
 					this.applyVolume(id);
 				}).then((completed) => {
 					if (!completed) return;
-					this.applyPause(id);
+					this.applyPause(id, cause);
 				}).catch((e) => {
 					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 				});
@@ -450,11 +477,12 @@ export class AudioManager extends Events {
 	}
 
 	fadeInAll(duration: number): void {
+		const cause: CauseInput = {kind: "system", detail: "fade in all"};
 		for (const [id, state] of this.tracks) {
 			if (state.playState === PlayState.Paused) {
 				this.fadeMultipliers.set(id, 0);
 				this.applyVolume(id);
-				this.play(id, true).then(() => {
+				this.play(id, true, cause).then(() => {
 					this.fades.start(id, 0, 1, duration, (value) => {
 						this.fadeMultipliers.set(id, value);
 						this.applyVolume(id);
@@ -469,6 +497,7 @@ export class AudioManager extends Events {
 	}
 
 	fadeOutType(type: string, duration: number): void {
+		const cause: CauseInput = {kind: "system", detail: `fade out ${type}`};
 		for (const [id, state] of this.tracks) {
 			if (state.def.type === type && state.playState === PlayState.Playing) {
 				const current = this.fadeMultipliers.get(id) ?? 1;
@@ -477,7 +506,7 @@ export class AudioManager extends Events {
 					this.applyVolume(id);
 				}).then((completed) => {
 					if (!completed) return;
-					this.applyPause(id);
+					this.applyPause(id, cause);
 				}).catch((e) => {
 					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
 				});
@@ -486,11 +515,12 @@ export class AudioManager extends Events {
 	}
 
 	fadeInType(type: string, duration: number): void {
+		const cause: CauseInput = {kind: "system", detail: `fade in ${type}`};
 		for (const [id, state] of this.tracks) {
 			if (state.def.type === type && state.playState === PlayState.Paused) {
 				this.fadeMultipliers.set(id, 0);
 				this.applyVolume(id);
-				this.play(id, true).then(() => {
+				this.play(id, true, cause).then(() => {
 					this.fades.start(id, 0, 1, duration, (value) => {
 						this.fadeMultipliers.set(id, value);
 						this.applyVolume(id);
@@ -609,6 +639,7 @@ export class AudioManager extends Events {
 			} else {
 				state.playState = PlayState.Stopped;
 				state.currentIndex = 0;
+				state.lastCause = buildCause("stop", {kind: "ended"});
 				this.trigger(EVENT_TRACK_CHANGED, id);
 				this.cleanupIfOrphaned(id);
 			}
@@ -647,12 +678,12 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	private fadeOutAndPause(id: string, duration: number): void {
-		this.fadeOutThen(id, duration, () => this.pause(id));
+	private fadeOutAndPause(id: string, duration: number, cause?: CauseInput): void {
+		this.fadeOutThen(id, duration, () => this.applyPause(id, cause));
 	}
 
-	private fadeOutAndStop(id: string, duration: number): void {
-		this.fadeOutThen(id, duration, () => this.stop(id));
+	private fadeOutAndStop(id: string, duration: number, cause?: CauseInput): void {
+		this.fadeOutThen(id, duration, () => this.stop(id, cause));
 	}
 
 	private fadeOutThen(id: string, duration: number, onComplete: () => void): void {
