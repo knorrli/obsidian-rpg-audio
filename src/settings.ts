@@ -72,7 +72,7 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Autoplay delay")
-			.setDesc("Delay in milliseconds before an autoplay track starts. If the track unloads during the delay (e.g. a hover popover is dismissed), playback is cancelled. Set to 0 for instant autoplay.")
+			.setDesc("Delay before an autoplay track starts. If the track unloads during the delay, for example when a hover popover is dismissed, playback is cancelled. Set to 0 for instant autoplay.")
 			.addSlider(slider => slider
 				.setLimits(0, 2000, 50)
 				.setValue(this.plugin.settings.autoplayDelay)
