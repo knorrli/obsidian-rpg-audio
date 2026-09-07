@@ -4,6 +4,9 @@ export enum PlayState {
 	Paused = "paused",
 }
 
+/** `hover` restricts autoplay to hover popovers, leaving the note silent when opened. */
+export type AutoplayMode = "off" | "always" | "hover";
+
 export interface AudioTrackDef {
 	id: string;
 	name: string;
@@ -11,7 +14,7 @@ export interface AudioTrackDef {
 	files: string[];
 	loop: boolean;
 	random: boolean;
-	autoplay: boolean;
+	autoplay: AutoplayMode;
 	stops: string[];
 	resumes: string[];
 	pauses: string[];
