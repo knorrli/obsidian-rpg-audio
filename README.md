@@ -14,7 +14,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
-- **Autoplay** — mark tracks with `autoplay: true` and they start playing as soon as their note opens or is shown in a hover popover. Gated by a sidebar toggle so prep stays silent and you only flip it on at the start of a session
+- **Autoplay** — mark tracks with `autoplay: true` and they start playing as soon as their note opens or is shown in a hover popover, or with `autoplay: hover` to fire from link previews only. Gated by a sidebar toggle so prep stays silent and you only flip it on at the start of a session
 - **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax
 - **Debug overlay** — optional sidebar toggle that shows each track's last event and the active scope set, useful when audio behaves unexpectedly
 
@@ -138,6 +138,25 @@ files:
 
 Add `random: true` to shuffle. Without `loop: true`, only one track plays and stops — paired with `random: true` this gives you a varied one-shot SFX (e.g. sword hits).
 
+### One track per section
+
+A note with several sections — a village with a heading per building — can carry its own track in each one. Link to a single section, for example from a map marker, and the hover popover renders only that section, so only its track starts:
+
+````markdown
+## The Smithy
+
+```rpg-audio
+id: weyford-smithy
+name: Smithy
+type: ambience
+loop: true
+autoplay: hover
+file: audio/ambience/forge.mp3
+```
+````
+
+Hovering `[[Weyford#The Smithy]]` starts the forge; opening Weyford yourself stays silent. Plain `autoplay: true` would start every section's track as it scrolls into view, which is what you want for a layered ambience bed in a single scene, but not for a note covering several places.
+
 ## Sidebar
 
 Click the music note icon in the ribbon (or run the **Toggle audio sidebar** command) to open a sidebar panel. The sidebar shows:
@@ -160,7 +179,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 | `scope` | No       | Comma-separated context labels (e.g. `tavern` or `outdoors, district-1`). Playing a scoped track stops other-scope tracks. See [Scene transitions with scope](#scene-transitions-with-scope). |
 | `loop`  | No       | `true` or `false`. For single-file tracks, loops the file. For multi-file tracks, continues to the next track when one ends (sequentially or shuffled). When `false`, plays one track and stops. Defaults to `false`. |
 | `random` | No      | `true` or `false`. When enabled, picks a random track on play and (with `loop: true`) shuffles to a different track each time. Defaults to `false`. |
-| `autoplay` | No    | `true` or `false`. When enabled, the track starts playing as soon as it is rendered (e.g. when the note is opened or shown in a hover popover). Requires the sidebar autoplay toggle to be on. Defaults to `false`. |
+| `autoplay` | No    | `true`, `hover`, or `false`. `true` starts the track as soon as it is rendered, whether the note was opened or shown in a hover popover. `hover` starts it only inside a hover popover, leaving the note silent when you open it yourself — see [One track per section](#one-track-per-section). Requires the sidebar autoplay toggle to be on. Defaults to `false`. |
 | `stops`     | No   | Comma-separated list of types or track IDs to stop when this track starts playing. Prefix a token with `!` to exclude. See [Advanced directives](#advanced-directives). |
 | `pauses`    | No   | Like `stops`, but paused tracks keep their position and can be resumed later. |
 | `resumes`   | No   | Comma-separated list of types or track IDs to resume when this track starts. Only affects tracks that are currently paused. |

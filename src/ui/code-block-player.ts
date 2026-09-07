@@ -1,7 +1,15 @@
 import {MarkdownRenderChild, setIcon} from "obsidian";
 import {AudioManager} from "../audio-manager";
-import {AudioTrackDef, PlayState, EVENT_TRACK_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
+import {AudioTrackDef, AutoplayMode, PlayState, EVENT_TRACK_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
 import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
+
+function parseAutoplayMode(value: string): AutoplayMode {
+	switch (value.toLowerCase()) {
+		case "true": return "always";
+		case "hover": return "hover";
+		default: return "off";
+	}
+}
 
 export function parseAudioBlock(source: string): AudioTrackDef | null {
 	const lines = source.split("\n").map(l => l.trim()).filter(l => l.length > 0);
@@ -11,7 +19,7 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 	let type = "";
 	let loop = false;
 	let random = false;
-	let autoplay = false;
+	let autoplay: AutoplayMode = "off";
 	let stops: string[] = [];
 	let resumes: string[] = [];
 	let pauses: string[] = [];
@@ -52,7 +60,7 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 				random = value === "true";
 				break;
 			case "autoplay":
-				autoplay = value === "true";
+				autoplay = parseAutoplayMode(value);
 				break;
 			case "stops":
 				if (value) {
@@ -124,15 +132,17 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 		this.syncState();
 
-		if (this.def.autoplay && !wasRegistered && this.manager.allowAutoplay) {
+		if (this.def.autoplay !== "off" && !wasRegistered && this.manager.allowAutoplay) {
 			const delay = this.manager.autoplayDelay;
-			if (delay > 0) {
+			// The block is not reliably attached to its popover yet when it renders,
+			// so hover mode always waits a tick before deciding where it is.
+			if (delay > 0 || this.def.autoplay === "hover") {
 				this.autoplayTimer = window.setTimeout(() => {
 					this.autoplayTimer = null;
-					void this.manager.play(this.def.id, false, {kind: "autoplay"});
+					this.startAutoplay();
 				}, delay);
 			} else {
-				void this.manager.play(this.def.id, false, {kind: "autoplay"});
+				this.startAutoplay();
 			}
 		}
 
@@ -141,6 +151,15 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.registerInterval(window.setInterval(() => {
 			if (!this.containerEl.isConnected) this.unload();
 		}, DETACH_POLL_INTERVAL_MS));
+	}
+
+	private startAutoplay(): void {
+		if (this.def.autoplay === "hover" && !this.isInHoverPopover()) return;
+		void this.manager.play(this.def.id, false, {kind: "autoplay"});
+	}
+
+	private isInHoverPopover(): boolean {
+		return this.containerEl.isConnected && !!this.containerEl.closest(".hover-popover");
 	}
 
 	onunload(): void {

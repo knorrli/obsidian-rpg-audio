@@ -1,6 +1,13 @@
 import { App, Modal, Setting, FuzzySuggestModal, TFile } from "obsidian";
+import { AutoplayMode } from "../types";
 
 const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "flac", "m4a", "webm", "aac"];
+
+const AUTOPLAY_OPTIONS: Record<AutoplayMode, string> = {
+	off: "Off",
+	always: "Always",
+	hover: "Hover popovers only",
+};
 
 const TYPE_OPTIONS: Record<string, string> = {
 	music: "Music",
@@ -23,7 +30,7 @@ function generateCodeBlock(opts: {
 	files: string[];
 	loop: boolean;
 	random: boolean;
-	autoplay: boolean;
+	autoplay: AutoplayMode;
 	stops: string;
 	pauses: string;
 	resumes: string;
@@ -35,7 +42,8 @@ function generateCodeBlock(opts: {
 	lines.push(`type: ${opts.type}`);
 	if (opts.loop) lines.push("loop: true");
 	if (opts.random) lines.push("random: true");
-	if (opts.autoplay) lines.push("autoplay: true");
+	if (opts.autoplay === "always") lines.push("autoplay: true");
+	if (opts.autoplay === "hover") lines.push("autoplay: hover");
 	if (opts.scope.trim()) lines.push(`scope: ${opts.scope.trim()}`);
 	if (opts.stops.trim()) lines.push(`stops: ${opts.stops.trim()}`);
 	if (opts.pauses.trim()) lines.push(`pauses: ${opts.pauses.trim()}`);
@@ -89,7 +97,7 @@ export class InsertTrackModal extends Modal {
 	private selectedFiles: string[] = [];
 	private loop = false;
 	private random = false;
-	private autoplay = false;
+	private autoplay: AutoplayMode = "off";
 	private stops = "";
 	private pauses = "";
 	private resumes = "";
@@ -198,10 +206,14 @@ export class InsertTrackModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Autoplay")
-			.setDesc("Start playing as soon as the track is rendered, like when opening a note or hovering a link popover")
-			.addToggle(toggle => toggle
-				.setValue(this.autoplay)
-				.onChange(value => { this.autoplay = value; }));
+			.setDesc("Start playing as soon as the track is rendered. Restrict it to hover popovers to keep the note silent when you open it yourself.")
+			.addDropdown(dropdown => {
+				for (const [value, label] of Object.entries(AUTOPLAY_OPTIONS)) {
+					dropdown.addOption(value, label);
+				}
+				dropdown.setValue(this.autoplay);
+				dropdown.onChange(value => { this.autoplay = value as AutoplayMode; });
+			});
 
 		new Setting(contentEl)
 			.setName("Scope")
