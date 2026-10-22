@@ -323,6 +323,9 @@ export class AudioManager extends Events {
 		let el = this.audioElements.get(id);
 		if (!el) {
 			el = new Audio();
+			// Vault resource URLs live on a per-vault app:// origin distinct from the
+			// window's; without a CORS-mode load the MediaElementSource outputs silence.
+			el.crossOrigin = "anonymous";
 			this.audioElements.set(id, el);
 			this.getOrCreateGainNode(id, el);
 			this.setupAudioElement(id, el);
