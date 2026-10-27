@@ -37,7 +37,7 @@ export default class RpgAudioPlugin extends Plugin {
 				el.createDiv({ cls: "rpg-audio-error", text: "Invalid rpg-audio block. Requires: id, name, type, and file/files." });
 				return;
 			}
-			const player = new RpgAudioCodeBlockPlayer(el, this.audioManager, this.stickyTracks, def, ctx.sourcePath);
+			const player = new RpgAudioCodeBlockPlayer(el, this.app, this.audioManager, this.stickyTracks, def, ctx.sourcePath);
 			ctx.addChild(player);
 		});
 
