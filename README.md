@@ -183,7 +183,7 @@ Tracks normally leave the sidebar once their note is closed and they're stopped.
 - **Library folder** — set **Settings → RPG Audio → Library folder**. Every `rpg-audio` block in any note inside that folder is always available in the sidebar, whichever note you have open. Good for a base set like weather, crowds, or combat music. Edits to library notes show up immediately.
 - **Pinning** — select the pin icon on a track, either in the sidebar or on the inline player. Pinned tracks stay in the **Pinned** section until you unpin them, and survive restarts. Use the unpin-all button on the **Pinned** header, or the **Unpin all tracks** command, to clear them after a session.
 
-A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" until you unpin it.
+A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" (once the track is stopped) until you unpin it.
 
 Track ids are global: a library track and a note block with the same `id` are the same track.
 

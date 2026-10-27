@@ -325,7 +325,7 @@ export class RpgAudioSidebarView extends ItemView {
 
 		updatePlayPauseButton(controls.playPauseBtn, track.playState);
 
-		if (!sticky.isLibraryTrack(track.def.id)) {
+		if (sticky.showsPinButton(track.def.id)) {
 			const pinBtn = createPinButton(topRow, () => void sticky.togglePin(track.def.id));
 			updatePinButton(pinBtn, sticky.isPinned(track.def.id));
 		}

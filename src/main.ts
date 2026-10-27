@@ -80,6 +80,7 @@ export default class RpgAudioPlugin extends Plugin {
 	}
 
 	onunload() {
+		this.stickyTracks.destroy();
 		this.audioManager.destroyAll();
 	}
 

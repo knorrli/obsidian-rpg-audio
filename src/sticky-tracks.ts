@@ -5,31 +5,42 @@ import {parseAudioBlock} from "./ui/code-block-player";
 import {AudioTrackDef, EVENT_STICKY_CHANGED, PinnedTrackRef} from "./types";
 
 const REFRESH_DEBOUNCE_MS = 300;
-const FENCE_OPEN = /^(`{3,}|~{3,})\s*rpg-audio\s*$/;
+const FENCE_OPEN = /^(`{3,}|~{3,})(.*)$/;
 const BLOCKQUOTE_PREFIX = /^\s*(>\s?)+/;
 
+type TrackEntry = {def: AudioTrackDef; sourcePath: string};
+
+function isClosingFence(line: string, marker: string): boolean {
+	return line.length >= marker.length && line === marker.charAt(0).repeat(line.length);
+}
+
+/** Every fence is tracked, so an rpg-audio example inside a longer markdown fence stays plain text. */
 function parseAudioBlocksInMarkdown(content: string): AudioTrackDef[] {
 	const defs: AudioTrackDef[] = [];
-	let fence: string | null = null;
+	let open: {marker: string; isAudio: boolean} | null = null;
 	let body: string[] = [];
 	for (const rawLine of content.split("\n")) {
 		const line = rawLine.replace(BLOCKQUOTE_PREFIX, "");
 		const trimmed = line.trim();
-		if (fence === null) {
+		if (open === null) {
 			const match = FENCE_OPEN.exec(trimmed);
 			if (match?.[1]) {
-				fence = match[1];
+				open = {marker: match[1], isAudio: (match[2] ?? "").trim() === "rpg-audio"};
 				body = [];
 			}
-		} else if (trimmed.startsWith(fence) && trimmed.replace(/[`~]/g, "") === "") {
-			const def = parseAudioBlock(body.join("\n"));
+		} else if (isClosingFence(trimmed, open.marker)) {
+			const def = open.isAudio ? parseAudioBlock(body.join("\n")) : null;
 			if (def) defs.push(def);
-			fence = null;
-		} else {
+			open = null;
+		} else if (open.isAudio) {
 			body.push(line);
 		}
 	}
 	return defs;
+}
+
+function isAtOrUnder(path: string, dir: string): boolean {
+	return path === dir || path.startsWith(`${dir}/`);
 }
 
 /**
@@ -41,7 +52,12 @@ export class StickyTracks extends Events {
 	private plugin: RpgAudioPlugin;
 	private manager: AudioManager;
 	private libraryIds: string[] = [];
+	private libraryIdSet: Set<string> = new Set();
+	/** Pins whose block was not found in their note on the last refresh. */
+	private unresolvedPins: Set<string> = new Set();
 	private refreshGeneration = 0;
+	private lastSignature = "";
+	private destroyed = false;
 	private _loaded = false;
 
 	readonly requestRefresh = debounce(() => void this.refresh(), REFRESH_DEBOUNCE_MS, true);
@@ -62,8 +78,13 @@ export class StickyTracks extends Events {
 		this.plugin.registerEvent(vault.on("delete", onChange));
 		this.plugin.registerEvent(vault.on("rename", (file, oldPath) => {
 			const pinsMoved = this.movePins(oldPath, file.path);
-			if (pinsMoved || this.isLibraryNote(oldPath) || this.isLibraryNote(file.path)) this.requestRefresh();
+			if (pinsMoved || this.touchesLibrary(oldPath) || this.touchesLibrary(file.path)) this.requestRefresh();
 		}));
+	}
+
+	destroy(): void {
+		this.destroyed = true;
+		this.requestRefresh.cancel();
 	}
 
 	/** Ordered by note path, then by position in the note. */
@@ -80,17 +101,17 @@ export class StickyTracks extends Events {
 		return this.plugin.settings.pinnedTracks;
 	}
 
-	private isLibraryNote(path: string): boolean {
-		const folder = this.libraryFolder();
-		return folder !== null && path.startsWith(`${folder}/`) && path.endsWith(".md");
-	}
-
 	isLibraryTrack(id: string): boolean {
-		return this.libraryIds.includes(id);
+		return this.libraryIdSet.has(id);
 	}
 
 	isPinned(id: string): boolean {
 		return this.pins.some(p => p.id === id);
+	}
+
+	/** Library tracks need no pin, but a pin made before the track joined the library must stay removable. */
+	showsPinButton(id: string): boolean {
+		return !this.isLibraryTrack(id) || this.isPinned(id);
 	}
 
 	async togglePin(id: string): Promise<void> {
@@ -100,6 +121,7 @@ export class StickyTracks extends Events {
 		}
 		const track = this.manager.getTrack(id);
 		if (!track) return;
+		this.unresolvedPins.delete(id);
 		await this.savePins([...this.pins, {id, path: track.sourcePath}]);
 	}
 
@@ -113,31 +135,45 @@ export class StickyTracks extends Events {
 
 	async refresh(): Promise<void> {
 		const generation = ++this.refreshGeneration;
+		const {vault} = this.plugin.app;
 
-		const libraryFiles = this.plugin.app.vault.getMarkdownFiles()
+		const libraryFiles = vault.getMarkdownFiles()
 			.filter(f => this.isLibraryNote(f.path))
 			.sort((a, b) => a.path.localeCompare(b.path));
-		const libraryEntries: {def: AudioTrackDef; sourcePath: string}[] = [];
-		for (const file of libraryFiles) {
-			for (const def of await this.readBlocks(file)) {
+		const pinPaths = Array.from(new Set(this.pins.map(p => p.path)));
+		const pinFiles = pinPaths.map(path => vault.getFileByPath(path));
+
+		const [libraryBlocks, pinBlocks] = await Promise.all([
+			Promise.all(libraryFiles.map(f => this.readBlocks(f))),
+			Promise.all(pinFiles.map(f => f ? this.readBlocks(f) : Promise.resolve([]))),
+		]);
+
+		if (this.destroyed || generation !== this.refreshGeneration) return;
+
+		const libraryEntries: TrackEntry[] = [];
+		const libraryIds = new Set<string>();
+		libraryFiles.forEach((file, i) => {
+			for (const def of libraryBlocks[i] ?? []) {
+				if (libraryIds.has(def.id)) continue;
+				libraryIds.add(def.id);
 				libraryEntries.push({def, sourcePath: file.path});
 			}
-		}
+		});
 
-		const libraryIds = new Set(libraryEntries.map(e => e.def.id));
-		const pinEntries: {def: AudioTrackDef; sourcePath: string}[] = [];
-		for (const path of new Set(this.pins.map(p => p.path))) {
-			const file = this.plugin.app.vault.getFileByPath(path);
-			if (!file) continue;
+		const pinEntries: TrackEntry[] = [];
+		const resolved = new Set<string>();
+		pinPaths.forEach((path, i) => {
 			const wanted = new Set(this.pins.filter(p => p.path === path).map(p => p.id));
-			for (const def of await this.readBlocks(file)) {
-				if (wanted.has(def.id) && !libraryIds.has(def.id)) pinEntries.push({def, sourcePath: path});
+			for (const def of pinBlocks[i] ?? []) {
+				if (!wanted.has(def.id) || libraryIds.has(def.id) || resolved.has(def.id)) continue;
+				resolved.add(def.id);
+				pinEntries.push({def, sourcePath: path});
 			}
-		}
-
-		if (generation !== this.refreshGeneration) return;
+		});
 
 		this.libraryIds = Array.from(libraryIds);
+		this.libraryIdSet = libraryIds;
+		this.unresolvedPins = new Set(this.pins.map(p => p.id).filter(id => !libraryIds.has(id) && !resolved.has(id)));
 		this._loaded = true;
 		this.manager.registerAll([...libraryEntries, ...pinEntries]);
 		this.applyRetention();
@@ -152,17 +188,25 @@ export class StickyTracks extends Events {
 		return raw ? normalizePath(raw) : null;
 	}
 
+	private isLibraryNote(path: string): boolean {
+		const folder = this.libraryFolder();
+		return folder !== null && path.startsWith(`${folder}/`) && path.endsWith(".md");
+	}
+
+	/** True for anything inside the library folder, the folder itself, or a folder containing it. */
+	private touchesLibrary(path: string): boolean {
+		const folder = this.libraryFolder();
+		return folder !== null && (isAtOrUnder(path, folder) || isAtOrUnder(folder, path));
+	}
+
 	private isRelevant(path: string): boolean {
-		return this.isLibraryNote(path) || this.pins.some(p => p.path === path);
+		return this.touchesLibrary(path) || this.pins.some(p => isAtOrUnder(p.path, path));
 	}
 
 	/** Handles both a renamed note and a renamed folder containing pinned notes. */
 	private movePins(oldPath: string, newPath: string): boolean {
-		const moved = (path: string): string | null => {
-			if (path === oldPath) return newPath;
-			if (path.startsWith(`${oldPath}/`)) return newPath + path.slice(oldPath.length);
-			return null;
-		};
+		const moved = (path: string): string | null =>
+			isAtOrUnder(path, oldPath) ? newPath + path.slice(oldPath.length) : null;
 		if (!this.pins.some(p => moved(p.path) !== null)) return false;
 		void this.savePins(this.pins.map(p => ({...p, path: moved(p.path) ?? p.path})));
 		return true;
@@ -174,8 +218,18 @@ export class StickyTracks extends Events {
 		await this.plugin.saveSettings();
 	}
 
+	/**
+	 * Unresolved pins are not retained, so their track is cleaned up once stopped
+	 * and the sidebar shows the pin as missing. A pin added since the last
+	 * refresh is not in the unresolved set yet and is retained.
+	 */
 	private applyRetention(): void {
-		this.manager.setRetained(new Set([...this.libraryIds, ...this.pins.map(p => p.id)]));
+		const pinIds = this.pins.map(p => p.id).filter(id => !this.unresolvedPins.has(id));
+		this.manager.setRetained(new Set([...this.libraryIds, ...pinIds]));
+
+		const signature = JSON.stringify([this.libraryIds, this.pins, Array.from(this.unresolvedPins)]);
+		if (signature === this.lastSignature) return;
+		this.lastSignature = signature;
 		this.trigger(EVENT_STICKY_CHANGED);
 	}
 }
