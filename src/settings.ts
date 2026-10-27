@@ -13,6 +13,7 @@ export interface RpgAudioSettings {
 	showDebugInfo: boolean;
 	libraryFolder: string;
 	pinnedTracks: PinnedTrackRef[];
+	trackVolumes: Record<string, number>;
 }
 
 export const DEFAULT_SETTINGS: RpgAudioSettings = {
@@ -26,6 +27,7 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	showDebugInfo: false,
 	libraryFolder: "",
 	pinnedTracks: [],
+	trackVolumes: {},
 };
 
 export class RpgAudioSettingTab extends PluginSettingTab {

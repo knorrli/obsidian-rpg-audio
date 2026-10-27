@@ -1,5 +1,5 @@
 import {setIcon} from "obsidian";
-import {AudioTrackState, PlayState} from "../types";
+import {AudioTrackState, MAX_TRACK_VOLUME, PlayState} from "../types";
 
 export interface PlayerControlsCallbacks {
 	onPlay: () => void;
@@ -33,9 +33,9 @@ export function createPlayerControls(
 		type: "range",
 	});
 	volumeSlider.min = "0";
-	volumeSlider.max = "1";
+	volumeSlider.max = String(MAX_TRACK_VOLUME);
 	volumeSlider.step = "0.01";
-	volumeSlider.value = String(initialVolume);
+	setSliderVolume(volumeSlider, initialVolume);
 
 	playPauseBtn.addEventListener("click", () => {
 		const isPlaying = playPauseBtn.dataset["state"] === PlayState.Playing;
@@ -47,9 +47,21 @@ export function createPlayerControls(
 	});
 
 	stopBtn.addEventListener("click", () => callbacks.onStop());
-	volumeSlider.addEventListener("input", () => callbacks.onVolumeChange(parseFloat(volumeSlider.value)));
+	volumeSlider.addEventListener("input", () => {
+		setSliderVolume(volumeSlider, parseFloat(volumeSlider.value));
+		callbacks.onVolumeChange(parseFloat(volumeSlider.value));
+	});
+	volumeSlider.addEventListener("dblclick", () => {
+		setSliderVolume(volumeSlider, 1);
+		callbacks.onVolumeChange(1);
+	});
 
 	return {container, playPauseBtn, stopBtn, volumeSlider};
+}
+
+export function setSliderVolume(slider: HTMLInputElement, volume: number): void {
+	slider.value = String(volume);
+	slider.setAttribute("aria-label", `Volume ${Math.round(volume * 100)}% (double-click to reset)`);
 }
 
 export function createPinButton(parent: HTMLElement, onToggle: () => void): HTMLButtonElement {

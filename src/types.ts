@@ -60,5 +60,7 @@ export const SIDEBAR_VIEW_TYPE = "rpg-audio-sidebar";
 export const ORPHAN_CHECK_DELAY_MS = 2000;
 /** How often to poll for DOM detachment (workaround for transclusion onunload bug). */
 export const DETACH_POLL_INTERVAL_MS = 2000;
+/** Track faders go up to 200% so quiet source files can be boosted. */
+export const MAX_TRACK_VOLUME = 2;
 /** Minimum fade duration when using the sidebar fade buttons. */
 export const MIN_FADE_DURATION_MS = 1000;

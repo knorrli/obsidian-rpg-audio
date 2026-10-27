@@ -14,6 +14,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 - **Crossfade** — exclusive transitions fade smoothly (configurable duration, or instant)
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
+- **Remembered volumes** — each track's fader position is saved, and faders go up to 200% to boost quiet source files
 - **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
 - **Autoplay** — mark tracks with `autoplay: true` and they start playing as soon as their note opens or is shown in a hover popover, or with `autoplay: hover` to fire from link previews only. Gated by a sidebar toggle so prep stays silent and you only flip it on at the start of a session
 - **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax
@@ -170,7 +171,7 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
   - **In view** — tracks from notes and hover popovers currently on screen
   - **Elsewhere** — tracks still playing or paused after their note was closed
 - **Per-section fade controls** — fade in or fade out all tracks in a section (or a library type group)
-- **Per-track controls** — play/pause, stop, volume slider, and pin button for each track
+- **Per-track controls** — play/pause, stop, volume slider, and pin button for each track. The volume slider runs from 0 to 200% with 100% in the middle, remembers its position per track `id` across restarts, and resets to 100% on double-click. Boosting a file with loud peaks above 100% can clip
 - **Playlist status** — current position for multi-file tracks (e.g. "Playing 2/5")
 - **Debug toggle** — bug icon in the footer reveals scope labels, last-event info per track, and the active scope set
 

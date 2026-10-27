@@ -6,6 +6,7 @@ import {
 	applyPlayStateClass,
 	createPinButton,
 	createPlayerControls,
+	setSliderVolume,
 	setStatusText,
 	updatePinButton,
 	updatePlayPauseButton,
@@ -137,7 +138,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		if (!state || !this.controls || !this.statusEl) return;
 
 		updatePlayPauseButton(this.controls.playPauseBtn, state.playState);
-		this.controls.volumeSlider.value = String(state.volume);
+		setSliderVolume(this.controls.volumeSlider, state.volume);
 
 		applyPlayStateClass(this.containerEl, state.playState);
 		setStatusText(this.statusEl, state);
