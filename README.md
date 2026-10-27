@@ -186,7 +186,7 @@ Tracks normally leave the sidebar once their note is closed and they're stopped.
 
 A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" (once the track is stopped) until you unpin it.
 
-Track ids are global, so each `id` should be defined in one note only. If a block in another note uses an id that's already taken, it shows a "Duplicate track id" error instead of a player. Library and pinned blocks always keep their id; otherwise the note that registered the id first keeps it. To get a library track's player into a scene note, transclude the block (`![[Library/Weather#Rain]]`) rather than copying it.
+Track ids are global, so each `id` should be defined in one note only. If a block in another note uses an id that's already taken, it shows a "Duplicate track id" error instead of a player. Library and pinned blocks always keep their id; otherwise the note that registered the id first keeps it. Two blocks with the same id inside one note aren't detected: the one rendered last wins. To get a library track's player into a scene note, transclude the block (`![[Library/Weather#Rain]]`) rather than copying it.
 
 ## Field reference
 
