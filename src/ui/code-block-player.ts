@@ -1,4 +1,4 @@
-import {MarkdownRenderChild, setIcon} from "obsidian";
+import {App, MarkdownRenderChild, setIcon} from "obsidian";
 import {AudioManager} from "../audio/audio-manager";
 import type {StickyTracks} from "../sticky-tracks";
 import {
@@ -9,6 +9,7 @@ import {
 	EVENT_STICKY_CHANGED,
 } from "../types";
 import {movedPath} from "../vault-paths";
+import {unloadWhenHostNoteCloses} from "./host-note";
 import {
 	applyPlayStateClass,
 	createPinButton,
@@ -21,6 +22,7 @@ import {
 } from "./player-controls";
 
 export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
+	private app: App;
 	private manager: AudioManager;
 	private sticky: StickyTracks;
 	private def: AudioTrackDef;
@@ -34,8 +36,9 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private claimed = false;
 	private shownHolderPath: string | null = null;
 
-	constructor(containerEl: HTMLElement, manager: AudioManager, sticky: StickyTracks, def: AudioTrackDef, sourcePath: string) {
+	constructor(containerEl: HTMLElement, app: App, manager: AudioManager, sticky: StickyTracks, def: AudioTrackDef, sourcePath: string) {
 		super(containerEl);
+		this.app = app;
 		this.manager = manager;
 		this.sticky = sticky;
 		this.def = def;
@@ -47,6 +50,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		this.claimed = this.manager.claim(this.def, this.sourcePath);
 		if (this.claimed) this.manager.attachPlayer(this.def.id);
 		this.render();
+		unloadWhenHostNoteCloses(this.app, this);
 		this.registerEvent(this.sticky.on(EVENT_STICKY_CHANGED, () => this.syncPinButton()));
 		this.registerEvent(this.manager.on(EVENT_TRACKS_UPDATED, () => this.syncClaim()));
 		this.registerEvent(this.manager.on(EVENT_SOURCE_RENAMED, (oldPath: string, newPath: string) => {
