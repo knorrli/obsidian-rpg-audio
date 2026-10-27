@@ -218,7 +218,6 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 	private syncPinButton(): void {
 		if (!this.pinBtn) return;
-		this.pinBtn.toggleClass("is-hidden", !this.sticky.showsPinButton(this.def.id));
 		updatePinButton(this.pinBtn, this.sticky.isPinned(this.def.id));
 	}
 

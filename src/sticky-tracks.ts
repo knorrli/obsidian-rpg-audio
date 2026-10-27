@@ -22,7 +22,6 @@ export class StickyTracks extends Events {
 	private plugin: RpgAudioPlugin;
 	private manager: AudioManager;
 	private libraryIds: string[] = [];
-	private libraryIdSet: Set<string> = new Set();
 	private libraryFolders: Map<string, string> = new Map();
 	/** Pins whose block was not found in their note on the last refresh. */
 	private unresolvedPins: Set<string> = new Set();
@@ -81,17 +80,8 @@ export class StickyTracks extends Events {
 		return baseName(this.libraryFolder() ?? "");
 	}
 
-	isLibraryTrack(id: string): boolean {
-		return this.libraryIdSet.has(id);
-	}
-
 	isPinned(id: string): boolean {
 		return this.pins.some(p => p.id === id);
-	}
-
-	/** Library tracks need no pin, but a pin made before the track joined the library must stay removable. */
-	showsPinButton(id: string): boolean {
-		return !this.isLibraryTrack(id) || this.isPinned(id);
 	}
 
 	async togglePin(id: string): Promise<void> {
@@ -155,7 +145,6 @@ export class StickyTracks extends Events {
 		});
 
 		this.libraryIds = Array.from(libraryIds);
-		this.libraryIdSet = libraryIds;
 		this.libraryFolders = libraryFolders;
 		this.unresolvedPins = new Set(this.pins.map(p => p.id).filter(id => !libraryIds.has(id) && !resolved.has(id)));
 		this._loaded = true;

@@ -469,10 +469,6 @@
 	color: var(--text-accent);
 }
 
-.rpg-audio-pin-btn.is-hidden {
-	display: none;
-}
-
 .rpg-audio-push-right {
 	margin-left: auto;
 }

@@ -42,10 +42,8 @@ export class SidebarTrackRow {
 			onVolumeChange: (v) => manager.setTrackVolume(id, v),
 		}, track.volume);
 
-		if (sticky.showsPinButton(id)) {
-			const pinBtn = createPinButton(topRow, () => void sticky.togglePin(id));
-			updatePinButton(pinBtn, sticky.isPinned(id));
-		}
+		const pinBtn = createPinButton(topRow, () => void sticky.togglePin(id));
+		updatePinButton(pinBtn, sticky.isPinned(id));
 
 		this.statusEl = this.rowEl.createDiv({cls: "rpg-audio-status"});
 		this.scopeEl = this.rowEl.createDiv({cls: "rpg-audio-sidebar-track-scope"});

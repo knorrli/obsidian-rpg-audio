@@ -47,7 +47,6 @@ describe("StickyTracks library folders", () => {
 		expect(sticky.libraryTrackIds).toEqual(["drip", "rain"]);
 		expect(sticky.libraryFolderOf("rain")).toBe("");
 		expect(sticky.libraryFolderOf("drip")).toBe("Erkundung/Dul");
-		expect(sticky.isLibraryTrack("inn")).toBe(false);
 		expect(sticky.libraryFolderName).toBe("Library");
 	});
 

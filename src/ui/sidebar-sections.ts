@@ -34,8 +34,8 @@ export function buildSidebarSections(manager: AudioManager, sticky: StickyTracks
 		return tracks;
 	};
 
-	const library = claim(sticky.libraryTrackIds);
 	const pinned = claim(sticky.pins.map(p => p.id));
+	const library = claim(sticky.libraryTrackIds);
 	const missingPins = sticky.loaded ? sticky.pins.filter(p => !manager.getTrack(p.id)) : [];
 
 	const rest = manager.getAllTracks().filter(t => !claimed.has(t.def.id));
@@ -43,8 +43,8 @@ export function buildSidebarSections(manager: AudioManager, sticky: StickyTracks
 	const elsewhere = rest.filter(t => !manager.hasPlayers(t.def.id));
 
 	const sections: SidebarSection[] = [
-		{key: "library", label: "Library", tracks: library, missingPins: []},
 		{key: "pinned", label: "Pinned", tracks: pinned, missingPins},
+		{key: "library", label: "Library", tracks: library, missingPins: []},
 		{key: "in-view", label: "In view", tracks: inView, missingPins: []},
 		{key: "elsewhere", label: "Elsewhere", tracks: elsewhere, missingPins: []},
 	];
