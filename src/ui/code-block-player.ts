@@ -66,7 +66,11 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 		this.syncState();
 
-		if (this.def.autoplay !== "off" && !wasRegistered && this.manager.allowAutoplay) {
+		// A hover popover is rendered by the hover itself, so it may start a track
+		// another note already shows; elsewhere only a first render autoplays, so
+		// re-rendering an open note doesn't start its tracks again.
+		const mayAutoplay = this.def.autoplay === "hover" || !wasRegistered;
+		if (this.def.autoplay !== "off" && mayAutoplay && this.manager.allowAutoplay) {
 			const delay = this.manager.autoplayDelay;
 			// The block is not reliably attached to its popover yet when it renders,
 			// so hover mode always waits a tick before deciding where it is.
@@ -82,8 +86,12 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	}
 
 	private startAutoplay(): void {
-		if (this.def.autoplay === "hover" && !this.isInHoverPopover()) return;
+		if (this.def.autoplay === "hover" && !this.mayAutoplayOnHover()) return;
 		void this.manager.play(this.def.id, false, {kind: "autoplay"});
+	}
+
+	private mayAutoplayOnHover(): boolean {
+		return this.claimed && this.isInHoverPopover() && this.manager.canAutoplayOnHover(this.def.id);
 	}
 
 	private isInHoverPopover(): boolean {
