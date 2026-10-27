@@ -1,6 +1,6 @@
-import {AudioManager} from "../audio-manager";
+import {AudioManager} from "../audio/audio-manager";
 import type {StickyTracks} from "../sticky-tracks";
-import {AudioTrackState, PinnedTrackRef} from "../types";
+import {AudioTrackState, MIN_FADE_DURATION_MS, PinnedTrackRef, PlayState} from "../types";
 
 export type SectionKey = "library" | "pinned" | "in-view" | "elsewhere";
 
@@ -63,4 +63,12 @@ export function groupByType(tracks: AudioTrackState[]): TypeGroup[] {
 	}
 	return Array.from(groups, ([type, groupTracks]) => ({type, tracks: groupTracks}))
 		.sort((a, b) => a.type.localeCompare(b.type));
+}
+
+export function anyInState(manager: AudioManager, ids: string[], playState: PlayState): boolean {
+	return ids.some(id => manager.getTrack(id)?.playState === playState);
+}
+
+export function sidebarFadeDuration(manager: AudioManager): number {
+	return Math.max(manager.crossfadeDuration, MIN_FADE_DURATION_MS);
 }

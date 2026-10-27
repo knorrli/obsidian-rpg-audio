@@ -1,110 +1,16 @@
 import {MarkdownRenderChild, setIcon} from "obsidian";
-import {AudioManager} from "../audio-manager";
+import {AudioManager} from "../audio/audio-manager";
 import type {StickyTracks} from "../sticky-tracks";
-import {AudioTrackDef, AutoplayMode, PlayState, EVENT_TRACK_CHANGED, EVENT_STICKY_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
-import {createPinButton, createPlayerControls, updatePinButton, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
-
-function parseAutoplayMode(value: string): AutoplayMode {
-	switch (value.toLowerCase()) {
-		case "true": return "always";
-		case "hover": return "hover";
-		default: return "off";
-	}
-}
-
-export function parseAudioBlock(source: string): AudioTrackDef | null {
-	const lines = source.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-
-	let id = "";
-	let name = "";
-	let type = "";
-	let loop = false;
-	let random = false;
-	let autoplay: AutoplayMode = "off";
-	let stops: string[] = [];
-	let resumes: string[] = [];
-	let pauses: string[] = [];
-	let scope: string[] = [];
-	const files: string[] = [];
-	let inFilesList = false;
-
-	for (const line of lines) {
-		if (inFilesList) {
-			if (line.startsWith("- ")) {
-				files.push(line.slice(2).trim());
-				continue;
-			} else {
-				inFilesList = false;
-			}
-		}
-
-		const colonIdx = line.indexOf(":");
-		if (colonIdx === -1) continue;
-
-		const key = line.slice(0, colonIdx).trim().toLowerCase();
-		const value = line.slice(colonIdx + 1).trim();
-
-		switch (key) {
-			case "id":
-				id = value;
-				break;
-			case "name":
-				name = value;
-				break;
-			case "type":
-				type = value;
-				break;
-			case "loop":
-				loop = value === "true";
-				break;
-			case "random":
-				random = value === "true";
-				break;
-			case "autoplay":
-				autoplay = parseAutoplayMode(value);
-				break;
-			case "stops":
-				if (value) {
-					stops = value.split(",").map(s => s.trim()).filter(s => s.length > 0);
-				}
-				break;
-			case "resumes":
-			case "starts": // deprecated alias for `resumes`, kept for backwards compatibility
-				if (value) {
-					resumes = value.split(",").map(s => s.trim()).filter(s => s.length > 0);
-				}
-				break;
-			case "pauses":
-				if (value) {
-					pauses = value.split(",").map(s => s.trim()).filter(s => s.length > 0);
-				}
-				break;
-			case "scope":
-				if (value) {
-					const raw = value.split(",").map(s => s.trim()).filter(s => s.length > 0);
-					for (const token of raw) {
-						if (token.includes("/")) {
-							console.warn(`RPG Audio: scope label "${token}" contains "/" which is reserved for future use`);
-						}
-					}
-					scope = Array.from(new Set(raw));
-				}
-				break;
-			case "file":
-				files.push(value);
-				break;
-			case "files":
-				inFilesList = true;
-				break;
-		}
-	}
-
-	if (!id || !name || files.length === 0) return null;
-
-	if (!type) type = files.length > 1 ? "playlist" : "sfx";
-
-	return {id, name, type, files, loop, random, autoplay, stops, resumes, pauses, scope};
-}
+import {AudioTrackDef, EVENT_TRACK_CHANGED, EVENT_STICKY_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
+import {
+	applyPlayStateClass,
+	createPinButton,
+	createPlayerControls,
+	setStatusText,
+	updatePinButton,
+	updatePlayPauseButton,
+	PlayerControlsElements,
+} from "./player-controls";
 
 export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private manager: AudioManager;
@@ -233,21 +139,8 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		updatePlayPauseButton(this.controls.playPauseBtn, state.playState);
 		this.controls.volumeSlider.value = String(state.volume);
 
-		this.containerEl.toggleClass("is-playing", state.playState === PlayState.Playing);
-		this.containerEl.toggleClass("is-paused", state.playState === PlayState.Paused);
-		this.containerEl.toggleClass("is-stopped", state.playState === PlayState.Stopped);
-
-		let statusText = "";
-		if (state.error) {
-			statusText = state.error;
-			this.statusEl.addClass("rpg-audio-error-text");
-		} else {
-			this.statusEl.removeClass("rpg-audio-error-text");
-			if (state.playState === PlayState.Playing && state.def.files.length > 1) {
-				statusText = `${state.currentIndex + 1}/${state.def.files.length}`;
-			}
-		}
-		this.statusEl.setText(statusText);
+		applyPlayStateClass(this.containerEl, state.playState);
+		setStatusText(this.statusEl, state);
 	}
 
 	private syncPinButton(): void {

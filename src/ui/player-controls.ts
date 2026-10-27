@@ -1,5 +1,5 @@
 import {setIcon} from "obsidian";
-import {PlayState} from "../types";
+import {AudioTrackState, PlayState} from "../types";
 
 export interface PlayerControlsCallbacks {
 	onPlay: () => void;
@@ -76,5 +76,43 @@ export function updatePlayPauseButton(btn: HTMLButtonElement, state: PlayState):
 	} else {
 		setIcon(btn, "play");
 		btn.setAttribute("aria-label", "Play");
+	}
+}
+
+export function applyPlayStateClass(el: HTMLElement, playState: PlayState): void {
+	el.toggleClass("is-playing", playState === PlayState.Playing);
+	el.toggleClass("is-paused", playState === PlayState.Paused);
+	el.toggleClass("is-stopped", playState === PlayState.Stopped);
+}
+
+/** Shows the error if there is one, otherwise the playlist position while playing. */
+export function setStatusText(el: HTMLElement, state: AudioTrackState): void {
+	let text = "";
+	if (state.error) {
+		text = state.error;
+		el.addClass("rpg-audio-error-text");
+	} else {
+		el.removeClass("rpg-audio-error-text");
+		if (state.playState === PlayState.Playing && state.def.files.length > 1) {
+			text = `${state.currentIndex + 1}/${state.def.files.length}`;
+		}
+	}
+	el.setText(text);
+}
+
+/** Fade out while anything plays, fade in while something is paused, disabled otherwise. */
+export function updateFadeToggle(btn: HTMLElement, hasPlaying: boolean, hasPaused: boolean): void {
+	if (hasPlaying) {
+		setIcon(btn, "volume-x");
+		btn.setAttribute("aria-label", "Fade out");
+		btn.removeClass("rpg-audio-btn-disabled");
+	} else if (hasPaused) {
+		setIcon(btn, "volume-2");
+		btn.setAttribute("aria-label", "Fade in");
+		btn.removeClass("rpg-audio-btn-disabled");
+	} else {
+		setIcon(btn, "volume-x");
+		btn.setAttribute("aria-label", "Fade out");
+		btn.addClass("rpg-audio-btn-disabled");
 	}
 }
