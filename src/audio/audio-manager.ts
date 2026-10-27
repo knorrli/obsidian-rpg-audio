@@ -8,12 +8,18 @@ import {
 	EVENT_MASTER_VOLUME,
 	EVENT_ALLOW_AUTOPLAY,
 	EVENT_ACTIVE_SCOPE_CHANGED,
+	MAX_TRACK_VOLUME,
 } from "../types";
 import { AudioOutput, resolveAudioUrl } from "./audio-output";
 import { CauseInput, buildCause } from "./causes";
 import { TrackFades } from "./track-fades";
 import { TrackLifetime } from "./track-lifetime";
 import { directiveTargets, sameScope, scopeTransitionTargets } from "./transitions";
+
+export interface VolumeStore {
+	get(id: string): number;
+	set(id: string, volume: number): void;
+}
 
 export class AudioManager extends Events {
 	audioFolder = "";
@@ -22,6 +28,7 @@ export class AudioManager extends Events {
 	autoplayDelay = 0;
 
 	private app: App;
+	private volumes: VolumeStore;
 	private tracks: Map<string, AudioTrackState> = new Map();
 	private output = new AudioOutput();
 	private fades = new TrackFades((id) => this.applyVolume(id));
@@ -31,9 +38,10 @@ export class AudioManager extends Events {
 	private _allowAutoplay = false;
 	private _activeScope: Set<string> = new Set();
 
-	constructor(app: App) {
+	constructor(app: App, volumes: VolumeStore) {
 		super();
 		this.app = app;
+		this.volumes = volumes;
 		this.lifetime = new TrackLifetime({
 			getTrack: (id) => this.tracks.get(id),
 			unregister: (id) => this.unregister(id),
@@ -104,7 +112,7 @@ export class AudioManager extends Events {
 			def,
 			sourcePath,
 			playState: PlayState.Stopped,
-			volume: 1.0,
+			volume: this.volumes.get(def.id),
 			currentIndex: 0,
 			error: null,
 			lastCause: null,
@@ -329,7 +337,8 @@ export class AudioManager extends Events {
 		const state = this.tracks.get(id);
 		if (!state) return;
 
-		state.volume = Math.max(0, Math.min(1, volume));
+		state.volume = Math.max(0, Math.min(MAX_TRACK_VOLUME, volume));
+		this.volumes.set(id, state.volume);
 		this.applyVolume(id);
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}

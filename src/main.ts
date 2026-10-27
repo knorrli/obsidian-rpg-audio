@@ -7,16 +7,19 @@ import { parseAudioBlock } from "./track-parser";
 import { RpgAudioSidebarView } from "./ui/sidebar-view";
 import { InsertTrackModal } from "./ui/insert-track-modal";
 import { StickyTracks } from "./sticky-tracks";
+import { TrackVolumes } from "./track-volumes";
 
 export default class RpgAudioPlugin extends Plugin {
 	settings: RpgAudioSettings;
 	audioManager: AudioManager;
 	stickyTracks: StickyTracks;
+	trackVolumes: TrackVolumes;
 
 	async onload() {
 		await this.loadSettings();
 
-		this.audioManager = new AudioManager(this.app);
+		this.trackVolumes = new TrackVolumes(this);
+		this.audioManager = new AudioManager(this.app, this.trackVolumes);
 		this.audioManager.masterVolume = this.settings.masterVolume;
 		this.audioManager.audioFolder = this.settings.audioFolder;
 		this.audioManager.crossfadeDuration = this.settings.crossfadeDuration;
@@ -81,6 +84,7 @@ export default class RpgAudioPlugin extends Plugin {
 	}
 
 	onunload() {
+		this.trackVolumes.flush();
 		this.stickyTracks.destroy();
 		this.audioManager.destroyAll();
 	}
