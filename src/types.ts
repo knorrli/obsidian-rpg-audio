@@ -53,6 +53,7 @@ export const EVENT_MASTER_VOLUME = "master-volume";
 export const EVENT_ALLOW_AUTOPLAY = "allow-autoplay";
 export const EVENT_ACTIVE_SCOPE_CHANGED = "active-scope-changed";
 export const EVENT_STICKY_CHANGED = "sticky-changed";
+export const EVENT_SOURCE_RENAMED = "source-renamed";
 
 export const SIDEBAR_VIEW_TYPE = "rpg-audio-sidebar";
 

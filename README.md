@@ -186,13 +186,13 @@ Tracks normally leave the sidebar once their note is closed and they're stopped.
 
 A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" (once the track is stopped) until you unpin it.
 
-Track ids are global: a library track and a note block with the same `id` are the same track.
+Track ids are global, so each `id` should be defined in one note only. If a block in another note uses an id that's already taken, it shows a "Duplicate track id" error instead of a player. Library and pinned blocks always keep their id; otherwise the note that registered the id first keeps it. To get a library track's player into a scene note, transclude the block (`![[Library/Weather#Rain]]`) rather than copying it.
 
 ## Field reference
 
 | Field   | Required | Description |
 |---------|----------|-------------|
-| `id`    | Yes      | Unique identifier for the track. Used internally to manage playback state. |
+| `id`    | Yes      | Unique identifier for the track, across all notes. Used for playback state, saved volume, pins, and directives. |
 | `name`  | Yes      | Display name shown in the player widget and sidebar. |
 | `type`  | No       | Label shown as a badge on the player (e.g. `sfx`, `ambience`, `playlist`). Defaults to `playlist` when multiple files are provided, `sfx` otherwise. |
 | `scope` | No       | Comma-separated context labels (e.g. `tavern` or `outdoors, district-1`). Playing a scoped track stops other-scope tracks. See [Scene transitions with scope](#scene-transitions-with-scope). |
@@ -313,7 +313,7 @@ That said, the code is yours to do with as you please (see [License](#license)):
 - **Pull requests** — if you fix a bug or add something useful, feel free to open a PR. I may merge it eventually, but no promises on timing.
 - **Issues** — you're welcome to report bugs, but self-service fixes via PRs are more likely to get addressed.
 - **Local development** — clone the repo into your vault's `.obsidian/plugins/rpg-audio/` folder, run `npm install`, then `npm run dev` to build with hot reload.
-- **Tests** — `npm test` runs the unit tests in `tests/`. They cover the logic that doesn't need Obsidian or audio (block parsing, directives). Playback and UI are still checked by hand in a vault.
+- **Tests** — `npm test` runs the unit tests in `tests/`. They cover the logic that doesn't need Obsidian or audio (block parsing, directives, track registration). Playback and UI are still checked by hand in a vault.
 
 ## AI disclaimer
 
