@@ -1,7 +1,8 @@
 import {MarkdownRenderChild, setIcon} from "obsidian";
 import {AudioManager} from "../audio-manager";
-import {AudioTrackDef, AutoplayMode, PlayState, EVENT_TRACK_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
-import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
+import type {StickyTracks} from "../sticky-tracks";
+import {AudioTrackDef, AutoplayMode, PlayState, EVENT_TRACK_CHANGED, EVENT_STICKY_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
+import {createPinButton, createPlayerControls, updatePinButton, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
 
 function parseAutoplayMode(value: string): AutoplayMode {
 	switch (value.toLowerCase()) {
@@ -107,22 +108,29 @@ export function parseAudioBlock(source: string): AudioTrackDef | null {
 
 export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private manager: AudioManager;
+	private sticky: StickyTracks;
 	private def: AudioTrackDef;
+	private sourcePath: string;
 	private controls: PlayerControlsElements | null = null;
+	private pinBtn: HTMLButtonElement | null = null;
 	private statusEl: HTMLElement | null = null;
 	private eventRef: (() => void) | null = null;
 	private autoplayTimer: number | null = null;
 
-	constructor(containerEl: HTMLElement, manager: AudioManager, def: AudioTrackDef) {
+	constructor(containerEl: HTMLElement, manager: AudioManager, sticky: StickyTracks, def: AudioTrackDef, sourcePath: string) {
 		super(containerEl);
 		this.manager = manager;
+		this.sticky = sticky;
 		this.def = def;
+		this.sourcePath = sourcePath;
 	}
 
 	onload(): void {
 		const wasRegistered = !!this.manager.getTrack(this.def.id);
-		this.manager.register(this.def);
+		this.manager.attachPlayer(this.def.id);
+		this.manager.register(this.def, this.sourcePath);
 		this.buildUI();
+		this.registerEvent(this.sticky.on(EVENT_STICKY_CHANGED, () => this.syncPinButton()));
 
 		const handler = (changedId: string) => {
 			if (changedId === this.def.id) this.syncState();
@@ -171,7 +179,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 			this.eventRef();
 			this.eventRef = null;
 		}
-		this.manager.scheduleOrphanCheck(this.def.id);
+		this.manager.detachPlayer(this.def.id);
 	}
 
 	private buildUI(): void {
@@ -185,6 +193,11 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		setIcon(iconEl, this.getTypeIcon());
 		header.createSpan({cls: "rpg-audio-name", text: this.def.name});
 		header.createSpan({cls: "rpg-audio-badge", text: this.def.type});
+		this.pinBtn = createPinButton(header, () => {
+			this.ensureActive();
+			void this.sticky.togglePin(this.def.id);
+		});
+		this.syncPinButton();
 
 		this.statusEl = el.createSpan({cls: "rpg-audio-status-inline"});
 
@@ -202,7 +215,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	/** Re-register track and event listener if orphaned (e.g. in embedded notes). */
 	private ensureActive(): void {
 		if (!this.manager.getTrack(this.def.id)) {
-			this.manager.register(this.def);
+			this.manager.register(this.def, this.sourcePath);
 		}
 		if (!this.eventRef) {
 			const handler = (changedId: string) => {
@@ -235,6 +248,12 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 			}
 		}
 		this.statusEl.setText(statusText);
+	}
+
+	private syncPinButton(): void {
+		if (!this.pinBtn) return;
+		this.pinBtn.toggleClass("is-hidden", this.sticky.isLibraryTrack(this.def.id));
+		updatePinButton(this.pinBtn, this.sticky.isPinned(this.def.id));
 	}
 
 	private getTypeIcon(): string {

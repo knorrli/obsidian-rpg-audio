@@ -57,6 +57,8 @@ export class AudioManager extends Events {
 	private _allowAutoplay = false;
 	private playFades: Map<string, "out" | "in"> = new Map();
 	private _activeScope: Set<string> = new Set();
+	private playerCounts: Map<string, number> = new Map();
+	private retained: Set<string> = new Set();
 
 	constructor(app: App) {
 		super();
@@ -189,25 +191,70 @@ export class AudioManager extends Events {
 		return this.tracks.get(id);
 	}
 
-	register(def: AudioTrackDef): void {
+	register(def: AudioTrackDef, sourcePath: string): void {
+		this.upsert(def, sourcePath);
+		this.trigger(EVENT_TRACKS_UPDATED);
+	}
+
+	registerAll(entries: {def: AudioTrackDef; sourcePath: string}[]): void {
+		let changed = false;
+		for (const {def, sourcePath} of entries) {
+			if (this.upsert(def, sourcePath)) changed = true;
+		}
+		if (changed) this.trigger(EVENT_TRACKS_UPDATED);
+	}
+
+	/** Returns true if the track is new or its definition changed. */
+	private upsert(def: AudioTrackDef, sourcePath: string): boolean {
 		this.clearOrphanTimer(def.id);
 
 		const existing = this.tracks.get(def.id);
 		if (existing) {
+			const changed = existing.sourcePath !== sourcePath || JSON.stringify(existing.def) !== JSON.stringify(def);
 			existing.def = def;
-			this.trigger(EVENT_TRACKS_UPDATED);
-			return;
+			existing.sourcePath = sourcePath;
+			return changed;
 		}
 
 		this.tracks.set(def.id, {
 			def,
+			sourcePath,
 			playState: PlayState.Stopped,
 			volume: 1.0,
 			currentIndex: 0,
 			error: null,
 			lastCause: null,
 		});
-		this.trigger(EVENT_TRACKS_UPDATED);
+		return true;
+	}
+
+	attachPlayer(id: string): void {
+		this.playerCounts.set(id, (this.playerCounts.get(id) ?? 0) + 1);
+	}
+
+	detachPlayer(id: string): void {
+		const count = (this.playerCounts.get(id) ?? 0) - 1;
+		if (count > 0) {
+			this.playerCounts.set(id, count);
+		} else {
+			this.playerCounts.delete(id);
+		}
+		this.scheduleOrphanCheck(id);
+	}
+
+	/**
+	 * Stays true through the orphan-check grace period after the last player
+	 * detaches, so a note switch doesn't flash its tracks out of view and back.
+	 */
+	hasPlayers(id: string): boolean {
+		return this.playerCounts.has(id) || this.orphanTimers.has(id);
+	}
+
+	/** Retained tracks survive with no player on screen; releasing one cleans it up once stopped. */
+	setRetained(ids: Set<string>): void {
+		const released = Array.from(this.retained).filter(id => !ids.has(id));
+		this.retained = new Set(ids);
+		for (const id of released) this.cleanupIfOrphaned(id);
 	}
 
 	unregister(id: string): void {
@@ -477,78 +524,48 @@ export class AudioManager extends Events {
 	}
 
 	fadeOutAll(duration: number): void {
-		const cause: CauseInput = {kind: "system", detail: "fade out all"};
-		for (const [id, state] of this.tracks) {
-			if (state.playState === PlayState.Playing) {
-				const current = this.fadeMultipliers.get(id) ?? 1;
-				this.fades.start(id, current, 0, duration, (value) => {
-					this.fadeMultipliers.set(id, value);
-					this.applyVolume(id);
-				}).then((completed) => {
-					if (!completed) return;
-					this.applyPause(id, cause);
-				}).catch((e) => {
-					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
-				});
-			}
-		}
+		this.fadeOutTracks(Array.from(this.tracks.keys()), duration, "fade out all");
 	}
 
 	fadeInAll(duration: number): void {
-		const cause: CauseInput = {kind: "system", detail: "fade in all"};
-		for (const [id, state] of this.tracks) {
-			if (state.playState === PlayState.Paused) {
-				this.fadeMultipliers.set(id, 0);
+		this.fadeInTracks(Array.from(this.tracks.keys()), duration, "fade in all");
+	}
+
+	fadeOutTracks(ids: string[], duration: number, detail: string): void {
+		const cause: CauseInput = {kind: "system", detail};
+		for (const id of ids) {
+			const state = this.tracks.get(id);
+			if (state?.playState !== PlayState.Playing) continue;
+			const current = this.fadeMultipliers.get(id) ?? 1;
+			this.fades.start(id, current, 0, duration, (value) => {
+				this.fadeMultipliers.set(id, value);
 				this.applyVolume(id);
-				this.play(id, true, cause).then(() => {
-					this.fades.start(id, 0, 1, duration, (value) => {
-						this.fadeMultipliers.set(id, value);
-						this.applyVolume(id);
-					}).catch((e) => {
-						console.error(`RPG Audio: fade-in failed for "${id}"`, e);
-					});
-				}).catch((e) => {
-					console.error(`RPG Audio: fade-in play failed for "${id}"`, e);
-				});
-			}
+			}).then((completed) => {
+				if (!completed) return;
+				this.applyPause(id, cause);
+			}).catch((e) => {
+				console.error(`RPG Audio: fade-out failed for "${id}"`, e);
+			});
 		}
 	}
 
-	fadeOutType(type: string, duration: number): void {
-		const cause: CauseInput = {kind: "system", detail: `fade out ${type}`};
-		for (const [id, state] of this.tracks) {
-			if (state.def.type === type && state.playState === PlayState.Playing) {
-				const current = this.fadeMultipliers.get(id) ?? 1;
-				this.fades.start(id, current, 0, duration, (value) => {
+	fadeInTracks(ids: string[], duration: number, detail: string): void {
+		const cause: CauseInput = {kind: "system", detail};
+		for (const id of ids) {
+			const state = this.tracks.get(id);
+			if (state?.playState !== PlayState.Paused) continue;
+			this.fadeMultipliers.set(id, 0);
+			this.applyVolume(id);
+			this.play(id, true, cause).then(() => {
+				this.fades.start(id, 0, 1, duration, (value) => {
 					this.fadeMultipliers.set(id, value);
 					this.applyVolume(id);
-				}).then((completed) => {
-					if (!completed) return;
-					this.applyPause(id, cause);
 				}).catch((e) => {
-					console.error(`RPG Audio: fade-out failed for "${id}"`, e);
+					console.error(`RPG Audio: fade-in failed for "${id}"`, e);
 				});
-			}
-		}
-	}
-
-	fadeInType(type: string, duration: number): void {
-		const cause: CauseInput = {kind: "system", detail: `fade in ${type}`};
-		for (const [id, state] of this.tracks) {
-			if (state.def.type === type && state.playState === PlayState.Paused) {
-				this.fadeMultipliers.set(id, 0);
-				this.applyVolume(id);
-				this.play(id, true, cause).then(() => {
-					this.fades.start(id, 0, 1, duration, (value) => {
-						this.fadeMultipliers.set(id, value);
-						this.applyVolume(id);
-					}).catch((e) => {
-						console.error(`RPG Audio: fade-in failed for "${id}"`, e);
-					});
-				}).catch((e) => {
-					console.error(`RPG Audio: fade-in play failed for "${id}"`, e);
-				});
-			}
+			}).catch((e) => {
+				console.error(`RPG Audio: fade-in play failed for "${id}"`, e);
+			});
 		}
 	}
 
@@ -561,16 +578,18 @@ export class AudioManager extends Events {
 		this.trigger(EVENT_TRACK_CHANGED, id);
 	}
 
-	scheduleOrphanCheck(id: string): void {
+	private scheduleOrphanCheck(id: string): void {
 		this.clearOrphanTimer(id);
 		const timer = window.setTimeout(() => {
 			this.orphanTimers.delete(id);
 			const state = this.tracks.get(id);
 			if (!state) return;
-			if (this.hasLivePlayerElement(id)) return;
+			if (this.retained.has(id) || this.hasLivePlayerElement(id)) return;
 			if (state.playState === PlayState.Playing || state.playState === PlayState.Paused) {
 				// Live element gone but track still in use; wait for it to stop, then
-				// cleanupIfOrphaned will pick it up.
+				// cleanupIfOrphaned will pick it up. The sidebar needs to re-sort it
+				// out of the on-screen tracks meanwhile.
+				this.trigger(EVENT_TRACKS_UPDATED);
 				return;
 			}
 			this.unregister(id);
@@ -589,7 +608,9 @@ export class AudioManager extends Events {
 	}
 
 	private cleanupIfOrphaned(id: string): void {
-		if (this.hasLivePlayerElement(id)) return;
+		const state = this.tracks.get(id);
+		if (!state || state.playState !== PlayState.Stopped) return;
+		if (this.retained.has(id) || this.hasLivePlayerElement(id)) return;
 		this.unregister(id);
 	}
 
@@ -607,6 +628,8 @@ export class AudioManager extends Events {
 		this.playFades.clear();
 		this.unregistering.clear();
 		this._activeScope.clear();
+		this.playerCounts.clear();
+		this.retained.clear();
 		for (const [, timer] of this.orphanTimers) {
 			window.clearTimeout(timer);
 		}

@@ -8,7 +8,8 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 ## Features
 
 - **Inline players** — add `rpg-audio` code blocks to any note and get play/pause, stop, and volume controls right next to your encounter text
-- **Sidebar** — a dedicated panel showing all tracks grouped by type, with global and per-group fade controls
+- **Sidebar** — a dedicated panel showing all tracks, with global and per-section fade controls
+- **Sticky tracks** — a library folder whose tracks are always in the sidebar, plus pinning for tracks you'll need again after leaving their note
 - **Scene transitions via `scope:`** — label tracks with one or more context tags; playing a scoped track automatically stops tracks from other scopes
 - **Crossfade** — exclusive transitions fade smoothly (configurable duration, or instant)
 - **Playlists** — list multiple files and they play in sequence, with optional looping
@@ -163,11 +164,28 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 
 - **Global controls** — Fade In All, Fade Out All, and Stop All buttons
 - **Master volume slider** — controls the global volume for all tracks
-- **Tracks grouped by type** — collapsible sections for each type (music, ambience, sfx, etc.)
-- **Per-group fade controls** — fade in or fade out all tracks of a specific type
-- **Per-track controls** — play/pause, stop, and volume slider for each track
+- **Track sections** — collapsible sections, each listing a track once, in this order:
+  - **Library** — tracks from the library folder, grouped by type (see [Sticky tracks](#sticky-tracks))
+  - **Pinned** — tracks you pinned, in the order you pinned them
+  - **In view** — tracks from notes and hover popovers currently on screen
+  - **Elsewhere** — tracks still playing or paused after their note was closed
+- **Per-section fade controls** — fade in or fade out all tracks in a section (or a library type group)
+- **Per-track controls** — play/pause, stop, volume slider, and pin button for each track
 - **Playlist status** — current position for multi-file tracks (e.g. "Playing 2/5")
 - **Debug toggle** — bug icon in the footer reveals scope labels, last-event info per track, and the active scope set
+
+Tracks never reorder when they start or stop playing, so a track stays where you remember it.
+
+## Sticky tracks
+
+Tracks normally leave the sidebar once their note is closed and they're stopped. Two ways to keep them around:
+
+- **Library folder** — set **Settings → RPG Audio → Library folder**. Every `rpg-audio` block in any note inside that folder is always available in the sidebar, whichever note you have open. Good for a base set like weather, crowds, or combat music. Edits to library notes show up immediately.
+- **Pinning** — select the pin icon on a track, either in the sidebar or on the inline player. Pinned tracks stay in the **Pinned** section until you unpin them, and survive restarts. Use the unpin-all button on the **Pinned** header, or the **Unpin all tracks** command, to clear them after a session.
+
+A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" until you unpin it.
+
+Track ids are global: a library track and a note block with the same `id` are the same track.
 
 ## Field reference
 
@@ -241,6 +259,7 @@ Prefix a token with `!` to exclude it. Example: `stops: ambient, !crowd-ambient`
 ## Settings
 
 - **Audio folder** — vault-relative folder where your audio files are stored (default: `audio`).
+- **Library folder** — vault-relative folder of notes whose tracks are always in the sidebar (default: empty, disabled). See [Sticky tracks](#sticky-tracks).
 - **Master volume** — global volume multiplier applied to all tracks.
 - **Auto-open sidebar** — automatically open the sidebar when the plugin loads.
 - **Autoplay delay** — duration in milliseconds to wait before an autoplay track actually starts (default: 0ms / instant). If the track unloads during the delay — for example a hover popover is dismissed before the timer fires — playback is cancelled. Useful when moving the mouse around a map with many marker popovers that would otherwise blast audio on every flicker.
@@ -251,11 +270,12 @@ Prefix a token with `!` to exclude it. Example: `stops: ambient, !crowd-ambient`
 
 - **Toggle audio sidebar** — show or hide the audio sidebar panel.
 - **Stop all audio** — stop all currently playing tracks.
+- **Unpin all tracks** — remove every pin from the sidebar.
 - **Insert audio track** — opens a modal to build and insert an `rpg-audio` code block at the cursor.
 
 ## Caveats
 
-- **Tracks appear in the sidebar only while the note containing them is open in the editor.** If you close the note, its tracks disappear from the sidebar. This is by design — the plugin reads `rpg-audio` code blocks from open documents — but it can be surprising at first. Keep your session notes open during play.
+- **Unpinned tracks outside the library folder appear in the sidebar only while their note is open** (or while they are still playing). Put tracks you always want into the library folder, or pin them.
 
 ## Limitations
 

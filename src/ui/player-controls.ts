@@ -52,6 +52,22 @@ export function createPlayerControls(
 	return {container, playPauseBtn, stopBtn, volumeSlider};
 }
 
+export function createPinButton(parent: HTMLElement, onToggle: () => void): HTMLButtonElement {
+	const btn = parent.createEl("button", {cls: "rpg-audio-btn rpg-audio-pin-btn clickable-icon"});
+	setIcon(btn, "pin");
+	btn.addEventListener("click", (e) => {
+		e.stopPropagation();
+		onToggle();
+	});
+	updatePinButton(btn, false);
+	return btn;
+}
+
+export function updatePinButton(btn: HTMLButtonElement, pinned: boolean): void {
+	btn.setAttribute("aria-label", pinned ? "Unpin" : "Pin to sidebar");
+	btn.toggleClass("is-active", pinned);
+}
+
 export function updatePlayPauseButton(btn: HTMLButtonElement, state: PlayState): void {
 	btn.dataset["state"] = state;
 	if (state === PlayState.Playing) {

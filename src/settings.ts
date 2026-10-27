@@ -1,5 +1,6 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
 import type RpgAudioPlugin from "./main";
+import type {PinnedTrackRef} from "./types";
 
 export interface RpgAudioSettings {
 	audioFolder: string;
@@ -10,6 +11,8 @@ export interface RpgAudioSettings {
 	crossfadeDuration: number;
 	playFadeDuration: number;
 	showDebugInfo: boolean;
+	libraryFolder: string;
+	pinnedTracks: PinnedTrackRef[];
 }
 
 export const DEFAULT_SETTINGS: RpgAudioSettings = {
@@ -21,6 +24,8 @@ export const DEFAULT_SETTINGS: RpgAudioSettings = {
 	crossfadeDuration: 2000,
 	playFadeDuration: 0,
 	showDebugInfo: false,
+	libraryFolder: "",
+	pinnedTracks: [],
 };
 
 export class RpgAudioSettingTab extends PluginSettingTab {
@@ -45,6 +50,18 @@ export class RpgAudioSettingTab extends PluginSettingTab {
 					this.plugin.settings.audioFolder = value;
 					this.plugin.audioManager.audioFolder = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Library folder")
+			.setDesc("Every rpg-audio block in notes inside this folder is always available in the sidebar. Leave empty to disable.")
+			.addText(text => text
+				.setPlaceholder("Audio library")
+				.setValue(this.plugin.settings.libraryFolder)
+				.onChange(async (value) => {
+					this.plugin.settings.libraryFolder = value;
+					await this.plugin.saveSettings();
+					this.plugin.stickyTracks.requestRefresh();
 				}));
 
 		new Setting(containerEl)
