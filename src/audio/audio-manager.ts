@@ -47,6 +47,7 @@ export class AudioManager extends Events {
 		this.lifetime = new TrackLifetime({
 			getTrack: (id) => this.tracks.get(id),
 			unregister: (id) => this.unregister(id),
+			onEnteredView: () => this.trigger(EVENT_TRACKS_UPDATED),
 			onLeftView: () => this.trigger(EVENT_TRACKS_UPDATED),
 		});
 	}
