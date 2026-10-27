@@ -8,11 +8,16 @@ import {App, MarkdownRenderChild, MarkdownView, TFile} from "obsidian";
 export function unloadWhenHostNoteCloses(app: App, child: MarkdownRenderChild): void {
 	let host: {view: MarkdownView; file: TFile} | null = null;
 	// The block renders before its section is attached to the view.
-	window.requestAnimationFrame(() => {
+	const frame = window.requestAnimationFrame(() => {
 		host = findHost(app, child.containerEl);
 	});
+	child.register(() => window.cancelAnimationFrame(frame));
 	child.registerEvent(app.workspace.on("file-open", () => {
-		if (host && host.view.file !== host.file) child.unload();
+		if (!host) {
+			host = findHost(app, child.containerEl);
+		} else if (host.view.file !== host.file) {
+			child.unload();
+		}
 	}));
 }
 

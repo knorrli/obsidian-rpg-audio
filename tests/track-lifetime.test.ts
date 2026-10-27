@@ -14,7 +14,7 @@ function createLifetime() {
 }
 
 describe("TrackLifetime.cleanupIfOrphaned", () => {
-	it("keeps a stopped track while a player is loaded, even one scrolled out of the DOM", () => {
+	it("keeps a stopped track while a player is loaded", () => {
 		const {lifetime, host} = createLifetime();
 		lifetime.attachPlayer("rain");
 
