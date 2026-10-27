@@ -7,7 +7,6 @@ import {
 	EVENT_TRACKS_UPDATED,
 	EVENT_SOURCE_RENAMED,
 	EVENT_STICKY_CHANGED,
-	DETACH_POLL_INTERVAL_MS,
 } from "../types";
 import {movedPath} from "../vault-paths";
 import {
@@ -76,18 +75,6 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 				this.startAutoplay();
 			}
 		}
-
-		// Obsidian does not call onunload for MarkdownRenderChild inside
-		// ![[...]] transclusions. Poll for DOM detachment as a fallback.
-		// syncClaim ignores events while the block is detached (e.g. a popover
-		// not attached yet), so the poll also catches up on those.
-		this.registerInterval(window.setInterval(() => {
-			if (this.containerEl.isConnected) {
-				this.syncClaim();
-			} else {
-				this.unload();
-			}
-		}, DETACH_POLL_INTERVAL_MS));
 	}
 
 	private startAutoplay(): void {
@@ -113,7 +100,6 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 	/** Takes the id once its holder in another note is gone, and gives it up when a library or pinned block takes it over. */
 	private syncClaim(): void {
-		if (!this.containerEl.isConnected) return;
 		const holderPath = this.manager.getTrack(this.def.id)?.sourcePath;
 		const free = holderPath === undefined || holderPath === this.sourcePath;
 		if (free === this.claimed) {
@@ -140,17 +126,11 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		}
 	}
 
-	/**
-	 * Drops the player class and track id so hasLivePlayerElement
-	 * (src/audio/track-lifetime.ts) doesn't count this block as a player of
-	 * the other note's track.
-	 */
 	private buildConflictUI(holderPath: string): void {
 		const el = this.containerEl;
 		el.empty();
 		this.shownHolderPath = holderPath;
 		el.removeClass("rpg-audio-player");
-		delete el.dataset.trackId;
 		this.controls = null;
 		this.pinBtn = null;
 		this.statusEl = null;
@@ -165,7 +145,6 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 		el.empty();
 		this.shownHolderPath = null;
 		el.addClass("rpg-audio-player");
-		el.dataset.trackId = this.def.id;
 
 		const header = el.createDiv({cls: "rpg-audio-header"});
 		const iconEl = header.createSpan({cls: "rpg-audio-icon"});

@@ -10,8 +10,10 @@ export interface LifetimeHost {
 }
 
 /**
- * Decides when a track can be unregistered: once it is stopped, has no player
- * on screen, and isn't retained by the library or a pin.
+ * Decides when a track can be unregistered: once it is stopped, has no loaded
+ * player, and isn't retained by the library or a pin. Reading view detaches
+ * sections scrolled far out of view without unloading their players, so the
+ * DOM can't tell whether a player is still there; only the counts can.
  */
 export class TrackLifetime {
 	private host: LifetimeHost;
@@ -57,7 +59,7 @@ export class TrackLifetime {
 	cleanupIfOrphaned(id: string): void {
 		const state = this.host.getTrack(id);
 		if (!state || state.playState !== PlayState.Stopped) return;
-		if (this.retained.has(id) || hasLivePlayerElement(id)) return;
+		if (this.retained.has(id) || this.playerCounts.has(id)) return;
 		this.host.unregister(id);
 	}
 
@@ -82,10 +84,8 @@ export class TrackLifetime {
 			this.orphanTimers.delete(id);
 			const state = this.host.getTrack(id);
 			if (!state) return;
-			if (this.retained.has(id) || hasLivePlayerElement(id)) return;
+			if (this.retained.has(id) || this.playerCounts.has(id)) return;
 			if (state.playState === PlayState.Playing || state.playState === PlayState.Paused) {
-				// Live element gone but track still in use; wait for it to stop, then
-				// cleanupIfOrphaned will pick it up.
 				this.host.onLeftView(id);
 				return;
 			}
@@ -93,18 +93,4 @@ export class TrackLifetime {
 		}, ORPHAN_CHECK_DELAY_MS);
 		this.orphanTimers.set(id, timer);
 	}
-}
-
-/**
- * Player components inside transclusions don't reliably get onunload, so the
- * player counts alone can't be trusted for cleanup; the DOM is checked too.
- */
-function hasLivePlayerElement(id: string): boolean {
-	const selector = `.rpg-audio-player[data-track-id="${CSS.escape(id)}"]`;
-	const elements = document.querySelectorAll<HTMLElement>(selector);
-	for (let i = 0; i < elements.length; i++) {
-		const el = elements[i];
-		if (el && el.isConnected) return true;
-	}
-	return false;
 }
