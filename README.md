@@ -313,6 +313,7 @@ That said, the code is yours to do with as you please (see [License](#license)):
 - **Pull requests** — if you fix a bug or add something useful, feel free to open a PR. I may merge it eventually, but no promises on timing.
 - **Issues** — you're welcome to report bugs, but self-service fixes via PRs are more likely to get addressed.
 - **Local development** — clone the repo into your vault's `.obsidian/plugins/rpg-audio/` folder, run `npm install`, then `npm run dev` to build with hot reload.
+- **Tests** — `npm test` runs the unit tests in `tests/`. They cover the logic that doesn't need Obsidian or audio (block parsing, directives). Playback and UI are still checked by hand in a vault.
 
 ## AI disclaimer
 
