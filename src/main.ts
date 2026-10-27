@@ -1,8 +1,9 @@
 import { Plugin } from "obsidian";
 import { DEFAULT_SETTINGS, RpgAudioSettings, RpgAudioSettingTab } from "./settings";
-import { AudioManager } from "./audio-manager";
+import { AudioManager } from "./audio/audio-manager";
 import { SIDEBAR_VIEW_TYPE } from "./types";
-import { parseAudioBlock, RpgAudioCodeBlockPlayer } from "./ui/code-block-player";
+import { RpgAudioCodeBlockPlayer } from "./ui/code-block-player";
+import { parseAudioBlock } from "./track-parser";
 import { RpgAudioSidebarView } from "./ui/sidebar-view";
 import { InsertTrackModal } from "./ui/insert-track-modal";
 import { StickyTracks } from "./sticky-tracks";

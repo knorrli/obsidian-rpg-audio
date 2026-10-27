@@ -1,43 +1,12 @@
 import {Events, TAbstractFile, TFile, debounce, normalizePath} from "obsidian";
 import type RpgAudioPlugin from "./main";
-import {AudioManager} from "./audio-manager";
-import {parseAudioBlock} from "./ui/code-block-player";
+import {AudioManager} from "./audio/audio-manager";
+import {parseAudioBlocksInMarkdown} from "./track-parser";
 import {AudioTrackDef, EVENT_STICKY_CHANGED, PinnedTrackRef} from "./types";
 
 const REFRESH_DEBOUNCE_MS = 300;
-const FENCE_OPEN = /^(`{3,}|~{3,})(.*)$/;
-const BLOCKQUOTE_PREFIX = /^\s*(>\s?)+/;
 
 type TrackEntry = {def: AudioTrackDef; sourcePath: string};
-
-function isClosingFence(line: string, marker: string): boolean {
-	return line.length >= marker.length && line === marker.charAt(0).repeat(line.length);
-}
-
-/** Every fence is tracked, so an rpg-audio example inside a longer markdown fence stays plain text. */
-function parseAudioBlocksInMarkdown(content: string): AudioTrackDef[] {
-	const defs: AudioTrackDef[] = [];
-	let open: {marker: string; isAudio: boolean} | null = null;
-	let body: string[] = [];
-	for (const rawLine of content.split("\n")) {
-		const line = rawLine.replace(BLOCKQUOTE_PREFIX, "");
-		const trimmed = line.trim();
-		if (open === null) {
-			const match = FENCE_OPEN.exec(trimmed);
-			if (match?.[1]) {
-				open = {marker: match[1], isAudio: (match[2] ?? "").trim() === "rpg-audio"};
-				body = [];
-			}
-		} else if (isClosingFence(trimmed, open.marker)) {
-			const def = open.isAudio ? parseAudioBlock(body.join("\n")) : null;
-			if (def) defs.push(def);
-			open = null;
-		} else if (open.isAudio) {
-			body.push(line);
-		}
-	}
-	return defs;
-}
 
 function isAtOrUnder(path: string, dir: string): boolean {
 	return path === dir || path.startsWith(`${dir}/`);
