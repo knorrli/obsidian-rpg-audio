@@ -13,6 +13,7 @@ export default tseslint.config(
 				projectService: {
 					allowDefaultProject: [
 						'eslint.config.js',
+						'vitest.config.ts',
 						'manifest.json'
 					]
 				},
@@ -22,6 +23,10 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		files: ["vitest.config.ts"],
+		rules: {"import/no-nodejs-modules": "off"},
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",

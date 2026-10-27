@@ -3,14 +3,11 @@ import type RpgAudioPlugin from "./main";
 import {AudioManager} from "./audio/audio-manager";
 import {parseAudioBlocksInMarkdown} from "./track-parser";
 import {AudioTrackDef, EVENT_STICKY_CHANGED, PinnedTrackRef} from "./types";
+import {isAtOrUnder, movedPath} from "./vault-paths";
 
 const REFRESH_DEBOUNCE_MS = 300;
 
 type TrackEntry = {def: AudioTrackDef; sourcePath: string};
-
-function isAtOrUnder(path: string, dir: string): boolean {
-	return path === dir || path.startsWith(`${dir}/`);
-}
 
 /**
  * Keeps tracks registered after their note closes: every block in the library
@@ -174,8 +171,7 @@ export class StickyTracks extends Events {
 
 	/** Handles both a renamed note and a renamed folder containing pinned notes. */
 	private movePins(oldPath: string, newPath: string): boolean {
-		const moved = (path: string): string | null =>
-			isAtOrUnder(path, oldPath) ? newPath + path.slice(oldPath.length) : null;
+		const moved = (path: string) => movedPath(path, oldPath, newPath);
 		if (!this.pins.some(p => moved(p.path) !== null)) return false;
 		void this.savePins(this.pins.map(p => ({...p, path: moved(p.path) ?? p.path})));
 		return true;

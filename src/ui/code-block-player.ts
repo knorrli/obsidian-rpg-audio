@@ -1,7 +1,15 @@
 import {MarkdownRenderChild, setIcon} from "obsidian";
 import {AudioManager} from "../audio/audio-manager";
 import type {StickyTracks} from "../sticky-tracks";
-import {AudioTrackDef, EVENT_TRACK_CHANGED, EVENT_STICKY_CHANGED, DETACH_POLL_INTERVAL_MS} from "../types";
+import {
+	AudioTrackDef,
+	EVENT_TRACK_CHANGED,
+	EVENT_TRACKS_UPDATED,
+	EVENT_SOURCE_RENAMED,
+	EVENT_STICKY_CHANGED,
+	DETACH_POLL_INTERVAL_MS,
+} from "../types";
+import {movedPath} from "../vault-paths";
 import {
 	applyPlayStateClass,
 	createPinButton,
@@ -23,6 +31,9 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private statusEl: HTMLElement | null = null;
 	private eventRef: (() => void) | null = null;
 	private autoplayTimer: number | null = null;
+	/** False while a block in another note holds this id; the player then shows an error instead of controls. */
+	private claimed = false;
+	private shownHolderPath: string | null = null;
 
 	constructor(containerEl: HTMLElement, manager: AudioManager, sticky: StickyTracks, def: AudioTrackDef, sourcePath: string) {
 		super(containerEl);
@@ -34,10 +45,15 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 	onload(): void {
 		const wasRegistered = !!this.manager.getTrack(this.def.id);
-		this.manager.attachPlayer(this.def.id);
-		this.manager.register(this.def, this.sourcePath);
-		this.buildUI();
+		this.claimed = this.manager.claim(this.def, this.sourcePath);
+		if (this.claimed) this.manager.attachPlayer(this.def.id);
+		this.render();
 		this.registerEvent(this.sticky.on(EVENT_STICKY_CHANGED, () => this.syncPinButton()));
+		this.registerEvent(this.manager.on(EVENT_TRACKS_UPDATED, () => this.syncClaim()));
+		this.registerEvent(this.manager.on(EVENT_SOURCE_RENAMED, (oldPath: string, newPath: string) => {
+			this.sourcePath = movedPath(this.sourcePath, oldPath, newPath) ?? this.sourcePath;
+			this.syncClaim();
+		}));
 
 		const handler = (changedId: string) => {
 			if (changedId === this.def.id) this.syncState();
@@ -63,8 +79,14 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 		// Obsidian does not call onunload for MarkdownRenderChild inside
 		// ![[...]] transclusions. Poll for DOM detachment as a fallback.
+		// syncClaim ignores events while the block is detached (e.g. a popover
+		// not attached yet), so the poll also catches up on those.
 		this.registerInterval(window.setInterval(() => {
-			if (!this.containerEl.isConnected) this.unload();
+			if (this.containerEl.isConnected) {
+				this.syncClaim();
+			} else {
+				this.unload();
+			}
 		}, DETACH_POLL_INTERVAL_MS));
 	}
 
@@ -86,12 +108,62 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 			this.eventRef();
 			this.eventRef = null;
 		}
-		this.manager.detachPlayer(this.def.id);
+		if (this.claimed) this.manager.detachPlayer(this.def.id);
+	}
+
+	/** Takes the id once its holder in another note is gone, and gives it up when a library or pinned block takes it over. */
+	private syncClaim(): void {
+		if (!this.containerEl.isConnected) return;
+		const holderPath = this.manager.getTrack(this.def.id)?.sourcePath;
+		const free = holderPath === undefined || holderPath === this.sourcePath;
+		if (free === this.claimed) {
+			if (!free && holderPath !== this.shownHolderPath) this.render();
+			return;
+		}
+		// Set before claim(): it triggers EVENT_TRACKS_UPDATED, which re-enters this method.
+		this.claimed = free;
+		if (free) {
+			this.manager.attachPlayer(this.def.id);
+			this.manager.claim(this.def, this.sourcePath);
+		} else {
+			this.manager.detachPlayer(this.def.id);
+		}
+		this.render();
+		this.syncState();
+	}
+
+	private render(): void {
+		if (this.claimed) {
+			this.buildUI();
+		} else {
+			this.buildConflictUI(this.manager.getTrack(this.def.id)?.sourcePath ?? "");
+		}
+	}
+
+	/**
+	 * Drops the player class and track id so hasLivePlayerElement
+	 * (src/audio/track-lifetime.ts) doesn't count this block as a player of
+	 * the other note's track.
+	 */
+	private buildConflictUI(holderPath: string): void {
+		const el = this.containerEl;
+		el.empty();
+		this.shownHolderPath = holderPath;
+		el.removeClass("rpg-audio-player");
+		delete el.dataset.trackId;
+		this.controls = null;
+		this.pinBtn = null;
+		this.statusEl = null;
+		el.createDiv({
+			cls: "rpg-audio-error",
+			text: `Duplicate track id "${this.def.id}", already used in ${holderPath}. Give this block its own id, or transclude the original block.`,
+		});
 	}
 
 	private buildUI(): void {
 		const el = this.containerEl;
 		el.empty();
+		this.shownHolderPath = null;
 		el.addClass("rpg-audio-player");
 		el.dataset.trackId = this.def.id;
 
@@ -122,7 +194,7 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	/** Re-register track and event listener if orphaned (e.g. in embedded notes). */
 	private ensureActive(): void {
 		if (!this.manager.getTrack(this.def.id)) {
-			this.manager.register(this.def, this.sourcePath);
+			this.manager.claim(this.def, this.sourcePath);
 		}
 		if (!this.eventRef) {
 			const handler = (changedId: string) => {

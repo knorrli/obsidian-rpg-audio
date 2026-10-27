@@ -8,6 +8,7 @@ import {
 	EVENT_MASTER_VOLUME,
 	EVENT_ALLOW_AUTOPLAY,
 	EVENT_ACTIVE_SCOPE_CHANGED,
+	EVENT_SOURCE_RENAMED,
 	MAX_TRACK_VOLUME,
 } from "../types";
 import { AudioOutput, resolveAudioUrl } from "./audio-output";
@@ -15,6 +16,7 @@ import { CauseInput, buildCause } from "./causes";
 import { TrackFades } from "./track-fades";
 import { TrackLifetime } from "./track-lifetime";
 import { directiveTargets, sameScope, scopeTransitionTargets } from "./transitions";
+import { movedPath } from "../vault-paths";
 
 export interface VolumeStore {
 	get(id: string): number;
@@ -83,9 +85,17 @@ export class AudioManager extends Events {
 		return this.tracks.get(id);
 	}
 
-	register(def: AudioTrackDef, sourcePath: string): void {
+	/**
+	 * Registers a block rendered in a note, unless a block from another note
+	 * already holds the id. Library and pinned blocks go through registerAll
+	 * and always take the id over.
+	 */
+	claim(def: AudioTrackDef, sourcePath: string): boolean {
+		const existing = this.tracks.get(def.id);
+		if (existing && existing.sourcePath !== sourcePath) return false;
 		this.upsert(def, sourcePath);
 		this.trigger(EVENT_TRACKS_UPDATED);
+		return true;
 	}
 
 	registerAll(entries: {def: AudioTrackDef; sourcePath: string}[]): void {
@@ -118,6 +128,13 @@ export class AudioManager extends Events {
 			lastCause: null,
 		});
 		return true;
+	}
+
+	renameSource(oldPath: string, newPath: string): void {
+		for (const track of this.tracks.values()) {
+			track.sourcePath = movedPath(track.sourcePath, oldPath, newPath) ?? track.sourcePath;
+		}
+		this.trigger(EVENT_SOURCE_RENAMED, oldPath, newPath);
 	}
 
 	attachPlayer(id: string): void {

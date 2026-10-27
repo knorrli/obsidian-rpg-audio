@@ -77,6 +77,7 @@ export default class RpgAudioPlugin extends Plugin {
 		this.addSettingTab(new RpgAudioSettingTab(this.app, this));
 
 		this.app.workspace.onLayoutReady(() => {
+			this.registerEvent(this.app.vault.on("rename", (file, oldPath) => this.audioManager.renameSource(oldPath, file.path)));
 			this.stickyTracks.watchVault();
 			void this.stickyTracks.refresh();
 			if (this.settings.autoOpenSidebar) void this.activateSidebar();
