@@ -9,6 +9,10 @@ const REFRESH_DEBOUNCE_MS = 300;
 
 type TrackEntry = {def: AudioTrackDef; sourcePath: string};
 
+function isLibraryNote(path: string, libraryFolder: string): boolean {
+	return path.startsWith(`${libraryFolder}/`) && path.endsWith(".md");
+}
+
 /**
  * Keeps tracks registered after their note closes: every block in the library
  * folder, plus tracks the user pinned. Pins are stored as note path + track id
@@ -112,9 +116,10 @@ export class StickyTracks extends Events {
 	async refresh(): Promise<void> {
 		const generation = ++this.refreshGeneration;
 		const {vault} = this.plugin.app;
+		const root = this.libraryFolder();
 
 		const libraryFiles = vault.getMarkdownFiles()
-			.filter(f => this.isLibraryNote(f.path))
+			.filter(f => root !== null && isLibraryNote(f.path, root))
 			.sort((a, b) => a.path.localeCompare(b.path));
 		const pinPaths = Array.from(new Set(this.pins.map(p => p.path)));
 		const pinFiles = pinPaths.map(path => vault.getFileByPath(path));
@@ -129,12 +134,11 @@ export class StickyTracks extends Events {
 		const libraryEntries: TrackEntry[] = [];
 		const libraryIds = new Set<string>();
 		const libraryFolders = new Map<string, string>();
-		const root = this.libraryFolder() ?? "";
 		libraryFiles.forEach((file, i) => {
 			for (const def of libraryBlocks[i] ?? []) {
 				if (libraryIds.has(def.id)) continue;
 				libraryIds.add(def.id);
-				libraryFolders.set(def.id, folderWithin(file.path, root));
+				libraryFolders.set(def.id, folderWithin(file.path, root ?? ""));
 				libraryEntries.push({def, sourcePath: file.path});
 			}
 		});
@@ -166,11 +170,6 @@ export class StickyTracks extends Events {
 	private libraryFolder(): string | null {
 		const raw = this.plugin.settings.libraryFolder.trim();
 		return raw ? normalizePath(raw) : null;
-	}
-
-	private isLibraryNote(path: string): boolean {
-		const folder = this.libraryFolder();
-		return folder !== null && path.startsWith(`${folder}/`) && path.endsWith(".md");
 	}
 
 	/** True for anything inside the library folder, the folder itself, or a folder containing it. */
