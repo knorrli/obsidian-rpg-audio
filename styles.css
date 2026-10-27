@@ -457,3 +457,31 @@
 	justify-content: flex-end;
 	padding-top: 12px;
 }
+
+/* Sticky tracks */
+.rpg-audio-pin-btn {
+	flex-shrink: 0;
+	background: none;
+	color: var(--text-faint);
+}
+
+.rpg-audio-pin-btn.is-active {
+	color: var(--text-accent);
+}
+
+.rpg-audio-pin-btn.is-hidden {
+	display: none;
+}
+
+.rpg-audio-push-right {
+	margin-left: auto;
+}
+
+.rpg-audio-sidebar-subgroup {
+	margin: 4px 0 8px 8px;
+}
+
+.rpg-audio-sidebar-subgroup > .rpg-audio-sidebar-section-header {
+	font-size: 0.75em;
+	border-bottom: none;
+}

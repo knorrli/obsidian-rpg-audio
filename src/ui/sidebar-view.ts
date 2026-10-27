@@ -9,11 +9,14 @@ import {
 	EVENT_MASTER_VOLUME,
 	EVENT_ALLOW_AUTOPLAY,
 	EVENT_ACTIVE_SCOPE_CHANGED,
+	EVENT_STICKY_CHANGED,
 	AudioTrackState,
+	PinnedTrackRef,
 	TrackCause,
 	MIN_FADE_DURATION_MS,
 } from "../types";
-import {createPlayerControls, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
+import {createPinButton, createPlayerControls, updatePinButton, updatePlayPauseButton, PlayerControlsElements} from "./player-controls";
+import {buildSidebarSections, groupByType} from "./sidebar-sections";
 
 function formatCause(cause: TrackCause): string {
 	const kindLabel = cause.kind === "user" ? "" : ` (${cause.kind})`;
@@ -30,7 +33,7 @@ export class RpgAudioSidebarView extends ItemView {
 	private autoplayBtn: HTMLElement | null = null;
 	private collapsedGroups: Set<string> = new Set();
 	private globalFadeBtn: HTMLElement | null = null;
-	private typeFadeBtns: Map<string, HTMLElement> = new Map();
+	private groupFadeBtns: {btn: HTMLElement; ids: string[]}[] = [];
 	private debugToggleBtn: HTMLElement | null = null;
 	private activeScopeEl: HTMLElement | null = null;
 
@@ -83,6 +86,9 @@ export class RpgAudioSidebarView extends ItemView {
 		this.registerEvent(
 			this.manager.on(EVENT_ACTIVE_SCOPE_CHANGED, () => this.updateActiveScope())
 		);
+		this.registerEvent(
+			this.plugin.stickyTracks.on(EVENT_STICKY_CHANGED, () => this.renderAll())
+		);
 	}
 
 	async onClose(): Promise<void> {
@@ -91,7 +97,7 @@ export class RpgAudioSidebarView extends ItemView {
 		this.masterSlider = null;
 		this.autoplayBtn = null;
 		this.globalFadeBtn = null;
-		this.typeFadeBtns.clear();
+		this.groupFadeBtns = [];
 		this.debugToggleBtn = null;
 		this.activeScopeEl = null;
 	}
@@ -200,11 +206,11 @@ export class RpgAudioSidebarView extends ItemView {
 		if (!this.contentArea) return;
 		this.contentArea.empty();
 		this.trackRows.clear();
-		this.typeFadeBtns.clear();
+		this.groupFadeBtns = [];
 
-		const allTracks = this.manager.getAllTracks();
+		const sections = buildSidebarSections(this.manager, this.plugin.stickyTracks);
 
-		if (allTracks.length === 0) {
+		if (sections.length === 0) {
 			this.contentArea.createDiv({
 				cls: "rpg-audio-empty-state",
 				text: "No audio tracks defined. Add rpg-audio code blocks to your notes.",
@@ -212,75 +218,99 @@ export class RpgAudioSidebarView extends ItemView {
 			return;
 		}
 
-		const groupOrder: string[] = [];
-		const groupMap: Map<string, AudioTrackState[]> = new Map();
-		for (const track of allTracks) {
-			const key = track.def.type;
-			let group = groupMap.get(key);
-			if (!group) {
-				group = [];
-				groupMap.set(key, group);
-				groupOrder.push(key);
-			}
-			group.push(track);
-		}
-
-		groupOrder.sort((a, b) => a.localeCompare(b));
-
-		for (const type of groupOrder) {
-			const tracks = groupMap.get(type);
-			if (!tracks || tracks.length === 0) continue;
-
-			const section = this.contentArea.createDiv({cls: "rpg-audio-sidebar-section"});
-			const isCollapsed = this.collapsedGroups.has(type);
-
-			const sectionHeader = section.createDiv({
-				cls: "rpg-audio-sidebar-section-header" + (isCollapsed ? " is-collapsed" : ""),
+		for (const section of sections) {
+			const body = this.buildGroup(this.contentArea, {
+				collapseKey: section.key,
+				label: section.label,
+				tracks: section.tracks,
+				count: section.tracks.length + section.missingPins.length,
+				addHeaderButtons: section.key === "pinned" ? (header) => this.buildUnpinAllButton(header) : undefined,
 			});
+			if (!body) continue;
 
-			const chevron = sectionHeader.createSpan({cls: "rpg-audio-section-chevron"});
-			setIcon(chevron, "chevron-down");
-
-			sectionHeader.createSpan({text: type});
-
-			sectionHeader.createSpan({
-				cls: "rpg-audio-section-count",
-				text: String(tracks.length),
-			});
-
-			const fadeDuration = () => Math.max(this.manager.crossfadeDuration, MIN_FADE_DURATION_MS);
-
-			const fadeToggleBtn = sectionHeader.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn clickable-icon"});
-			fadeToggleBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				if (this.hasPlayingTracksOfType(type)) {
-					this.manager.fadeOutType(type, fadeDuration());
-				} else {
-					this.manager.fadeInType(type, fadeDuration());
+			if (section.key === "library") {
+				for (const group of groupByType(section.tracks)) {
+					const groupBody = this.buildGroup(body, {
+						collapseKey: `library/${group.type}`,
+						label: group.type,
+						tracks: group.tracks,
+						count: group.tracks.length,
+						isSubgroup: true,
+					});
+					if (!groupBody) continue;
+					for (const track of group.tracks) this.buildTrackRow(groupBody, track);
 				}
-			});
-			this.typeFadeBtns.set(type, fadeToggleBtn);
-			this.updateFadeToggle(fadeToggleBtn, this.hasPlayingTracksOfType(type), this.hasPausedTracksOfType(type));
-
-			sectionHeader.addEventListener("click", () => {
-				if (this.collapsedGroups.has(type)) {
-					this.collapsedGroups.delete(type);
-				} else {
-					this.collapsedGroups.add(type);
-				}
-				this.renderAll();
-			});
-
-			if (!isCollapsed) {
-				const sectionBody = section.createDiv({cls: "rpg-audio-sidebar-section-body"});
-				for (const track of tracks) {
-					this.buildTrackRow(sectionBody, track);
-				}
+			} else {
+				for (const track of section.tracks) this.buildTrackRow(body, track);
+				for (const pin of section.missingPins) this.buildMissingPinRow(body, pin);
 			}
 		}
 	}
 
+	/** Returns the group body, or null when the group is collapsed. */
+	private buildGroup(parent: HTMLElement, opts: {
+		collapseKey: string;
+		label: string;
+		tracks: AudioTrackState[];
+		count: number;
+		isSubgroup?: boolean;
+		addHeaderButtons?: (header: HTMLElement) => void;
+	}): HTMLElement | null {
+		const section = parent.createDiv({cls: opts.isSubgroup ? "rpg-audio-sidebar-subgroup" : "rpg-audio-sidebar-section"});
+		const isCollapsed = this.collapsedGroups.has(opts.collapseKey);
+
+		const header = section.createDiv({
+			cls: "rpg-audio-sidebar-section-header" + (isCollapsed ? " is-collapsed" : ""),
+		});
+
+		const chevron = header.createSpan({cls: "rpg-audio-section-chevron"});
+		setIcon(chevron, "chevron-down");
+		header.createSpan({text: opts.label});
+		header.createSpan({cls: "rpg-audio-section-count", text: String(opts.count)});
+
+		opts.addHeaderButtons?.(header);
+
+		const ids = opts.tracks.map(t => t.def.id);
+		if (ids.length > 0) {
+			const fadeDuration = () => Math.max(this.manager.crossfadeDuration, MIN_FADE_DURATION_MS);
+			const fadeToggleBtn = header.createEl("button", {cls: "rpg-audio-btn rpg-audio-section-fade-btn clickable-icon"});
+			fadeToggleBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				if (this.anyInState(ids, PlayState.Playing)) {
+					this.manager.fadeOutTracks(ids, fadeDuration(), `fade out ${opts.label}`);
+				} else {
+					this.manager.fadeInTracks(ids, fadeDuration(), `fade in ${opts.label}`);
+				}
+			});
+			this.groupFadeBtns.push({btn: fadeToggleBtn, ids});
+			this.updateFadeToggle(fadeToggleBtn, this.anyInState(ids, PlayState.Playing), this.anyInState(ids, PlayState.Paused));
+		}
+
+		header.addEventListener("click", () => {
+			if (this.collapsedGroups.has(opts.collapseKey)) {
+				this.collapsedGroups.delete(opts.collapseKey);
+			} else {
+				this.collapsedGroups.add(opts.collapseKey);
+			}
+			this.renderAll();
+		});
+
+		if (isCollapsed) return null;
+		return section.createDiv({cls: "rpg-audio-sidebar-section-body"});
+	}
+
+	private buildUnpinAllButton(header: HTMLElement): void {
+		const btn = header.createEl("button", {cls: "rpg-audio-btn clickable-icon"});
+		setIcon(btn, "pin-off");
+		btn.setAttribute("aria-label", "Unpin all");
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			void this.plugin.stickyTracks.unpinAll();
+		});
+	}
+
 	private buildTrackRow(parent: HTMLElement, track: AudioTrackState): void {
+		const sticky = this.plugin.stickyTracks;
 		const row = parent.createDiv({cls: "rpg-audio-sidebar-track"});
 		this.applyPlayStateClass(row, track.playState);
 		const topRow = row.createDiv({cls: "rpg-audio-sidebar-track-top"});
@@ -295,6 +325,11 @@ export class RpgAudioSidebarView extends ItemView {
 
 		updatePlayPauseButton(controls.playPauseBtn, track.playState);
 
+		if (sticky.showsPinButton(track.def.id)) {
+			const pinBtn = createPinButton(topRow, () => void sticky.togglePin(track.def.id));
+			updatePinButton(pinBtn, sticky.isPinned(track.def.id));
+		}
+
 		const statusEl = row.createDiv({cls: "rpg-audio-status"});
 		this.setStatusText(statusEl, track);
 
@@ -303,6 +338,16 @@ export class RpgAudioSidebarView extends ItemView {
 		this.updateDebugEls(scopeEl, debugEl, track);
 
 		this.trackRows.set(track.def.id, {rowEl: row, controls, statusEl, debugEl, scopeEl});
+	}
+
+	private buildMissingPinRow(parent: HTMLElement, pin: PinnedTrackRef): void {
+		const row = parent.createDiv({cls: "rpg-audio-sidebar-track is-stopped"});
+		const topRow = row.createDiv({cls: "rpg-audio-sidebar-track-top"});
+		topRow.createDiv({cls: "rpg-audio-sidebar-track-name", text: pin.id});
+		const pinBtn = createPinButton(topRow, () => void this.plugin.stickyTracks.unpin(pin.id));
+		pinBtn.addClass("rpg-audio-push-right");
+		updatePinButton(pinBtn, true);
+		row.createDiv({cls: "rpg-audio-status rpg-audio-error-text", text: `Not found in ${pin.path}`});
 	}
 
 	private updateTrackRow(id: string): void {
@@ -351,12 +396,8 @@ export class RpgAudioSidebarView extends ItemView {
 		return this.manager.getAllTracks().some(t => t.playState === PlayState.Paused);
 	}
 
-	private hasPlayingTracksOfType(type: string): boolean {
-		return this.manager.getAllTracks().some(t => t.def.type === type && t.playState === PlayState.Playing);
-	}
-
-	private hasPausedTracksOfType(type: string): boolean {
-		return this.manager.getAllTracks().some(t => t.def.type === type && t.playState === PlayState.Paused);
+	private anyInState(ids: string[], playState: PlayState): boolean {
+		return ids.some(id => this.manager.getTrack(id)?.playState === playState);
 	}
 
 	private updateFadeToggle(btn: HTMLElement, hasPlaying: boolean, hasPaused: boolean): void {
@@ -399,8 +440,8 @@ export class RpgAudioSidebarView extends ItemView {
 		if (this.globalFadeBtn) {
 			this.updateFadeToggle(this.globalFadeBtn, this.hasPlayingTracks(), this.hasPausedTracks());
 		}
-		for (const [type, btn] of this.typeFadeBtns) {
-			this.updateFadeToggle(btn, this.hasPlayingTracksOfType(type), this.hasPausedTracksOfType(type));
+		for (const {btn, ids} of this.groupFadeBtns) {
+			this.updateFadeToggle(btn, this.anyInState(ids, PlayState.Playing), this.anyInState(ids, PlayState.Paused));
 		}
 	}
 

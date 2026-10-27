@@ -5,10 +5,12 @@ import { SIDEBAR_VIEW_TYPE } from "./types";
 import { parseAudioBlock, RpgAudioCodeBlockPlayer } from "./ui/code-block-player";
 import { RpgAudioSidebarView } from "./ui/sidebar-view";
 import { InsertTrackModal } from "./ui/insert-track-modal";
+import { StickyTracks } from "./sticky-tracks";
 
 export default class RpgAudioPlugin extends Plugin {
 	settings: RpgAudioSettings;
 	audioManager: AudioManager;
+	stickyTracks: StickyTracks;
 
 	async onload() {
 		await this.loadSettings();
@@ -21,6 +23,8 @@ export default class RpgAudioPlugin extends Plugin {
 		this.audioManager.allowAutoplay = this.settings.allowAutoplay;
 		this.audioManager.autoplayDelay = this.settings.autoplayDelay;
 
+		this.stickyTracks = new StickyTracks(this, this.audioManager);
+
 		this.registerView(SIDEBAR_VIEW_TYPE, (leaf) => new RpgAudioSidebarView(leaf, this));
 
 		this.registerMarkdownCodeBlockProcessor("rpg-audio", (source, el, ctx) => {
@@ -29,7 +33,7 @@ export default class RpgAudioPlugin extends Plugin {
 				el.createDiv({ cls: "rpg-audio-error", text: "Invalid rpg-audio block. Requires: id, name, type, and file/files." });
 				return;
 			}
-			const player = new RpgAudioCodeBlockPlayer(el, this.audioManager, def);
+			const player = new RpgAudioCodeBlockPlayer(el, this.audioManager, this.stickyTracks, def, ctx.sourcePath);
 			ctx.addChild(player);
 		});
 
@@ -51,6 +55,12 @@ export default class RpgAudioPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "unpin-all",
+			name: "Unpin all tracks",
+			callback: () => this.stickyTracks.unpinAll(),
+		});
+
+		this.addCommand({
 			id: "insert-track",
 			name: "Insert audio track",
 			editorCallback: (editor) => {
@@ -62,12 +72,15 @@ export default class RpgAudioPlugin extends Plugin {
 
 		this.addSettingTab(new RpgAudioSettingTab(this.app, this));
 
-		if (this.settings.autoOpenSidebar) {
-			this.app.workspace.onLayoutReady(() => this.activateSidebar());
-		}
+		this.app.workspace.onLayoutReady(() => {
+			this.stickyTracks.watchVault();
+			void this.stickyTracks.refresh();
+			if (this.settings.autoOpenSidebar) void this.activateSidebar();
+		});
 	}
 
 	onunload() {
+		this.stickyTracks.destroy();
 		this.audioManager.destroyAll();
 	}
 

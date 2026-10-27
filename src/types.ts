@@ -33,6 +33,8 @@ export interface TrackCause {
 
 export interface AudioTrackState {
 	def: AudioTrackDef;
+	/** Vault path of the note the block was most recently read from. */
+	sourcePath: string;
 	playState: PlayState;
 	volume: number;
 	currentIndex: number;
@@ -40,11 +42,17 @@ export interface AudioTrackState {
 	lastCause: TrackCause | null;
 }
 
+export interface PinnedTrackRef {
+	id: string;
+	path: string;
+}
+
 export const EVENT_TRACK_CHANGED = "track-changed";
 export const EVENT_TRACKS_UPDATED = "tracks-updated";
 export const EVENT_MASTER_VOLUME = "master-volume";
 export const EVENT_ALLOW_AUTOPLAY = "allow-autoplay";
 export const EVENT_ACTIVE_SCOPE_CHANGED = "active-scope-changed";
+export const EVENT_STICKY_CHANGED = "sticky-changed";
 
 export const SIDEBAR_VIEW_TYPE = "rpg-audio-sidebar";
 
