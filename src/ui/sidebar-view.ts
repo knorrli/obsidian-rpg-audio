@@ -13,7 +13,7 @@ import {
 	AudioTrackState,
 } from "../types";
 import {updateFadeToggle} from "./player-controls";
-import {anyInState, buildSidebarSections, groupByType, sidebarFadeDuration} from "./sidebar-sections";
+import {anyInState, buildSidebarSections, groupByFolder, sidebarFadeDuration} from "./sidebar-sections";
 import {SidebarHeader} from "./sidebar-header";
 import {SidebarFooter} from "./sidebar-footer";
 import {SidebarTrackRow, buildMissingPinRow} from "./sidebar-track-row";
@@ -116,10 +116,11 @@ export class RpgAudioSidebarView extends ItemView {
 			if (!body) continue;
 
 			if (section.key === "library") {
-				for (const group of groupByType(section.tracks)) {
+				const sticky = this.plugin.stickyTracks;
+				for (const group of groupByFolder(section.tracks, id => sticky.libraryFolderOf(id))) {
 					const groupBody = this.buildGroup(body, {
-						collapseKey: `library/${group.type}`,
-						label: group.type,
+						collapseKey: `library/${group.path}`,
+						label: group.path || sticky.libraryFolderName,
 						tracks: group.tracks,
 						count: group.tracks.length,
 						isSubgroup: true,

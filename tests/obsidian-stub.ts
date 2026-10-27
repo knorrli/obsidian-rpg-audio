@@ -16,3 +16,18 @@ export class Events {
 		for (const handler of this.handlers.get(name) ?? []) handler(...data);
 	}
 }
+
+export function normalizePath(path: string): string {
+	return path.replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
+}
+
+/** Runs immediately: tests call the debounced function and check its effect synchronously. */
+export function debounce<T extends unknown[]>(fn: (...args: T) => unknown) {
+	const debounced = (...args: T) => {
+		fn(...args);
+		return debounced;
+	};
+	debounced.cancel = () => debounced;
+	debounced.run = () => undefined;
+	return debounced;
+}
