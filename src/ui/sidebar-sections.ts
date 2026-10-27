@@ -12,8 +12,8 @@ export interface SidebarSection {
 	missingPins: PinnedTrackRef[];
 }
 
-export interface TypeGroup {
-	type: string;
+export interface FolderGroup {
+	path: string;
 	tracks: AudioTrackState[];
 }
 
@@ -51,18 +51,20 @@ export function buildSidebarSections(manager: AudioManager, sticky: StickyTracks
 	return sections.filter(s => s.tracks.length > 0 || s.missingPins.length > 0);
 }
 
-export function groupByType(tracks: AudioTrackState[]): TypeGroup[] {
+/** One group per folder, sorted by path; tracks keep their order within a group. */
+export function groupByFolder(tracks: AudioTrackState[], folderOf: (id: string) => string): FolderGroup[] {
 	const groups = new Map<string, AudioTrackState[]>();
 	for (const track of tracks) {
-		const group = groups.get(track.def.type);
+		const path = folderOf(track.def.id);
+		const group = groups.get(path);
 		if (group) {
 			group.push(track);
 		} else {
-			groups.set(track.def.type, [track]);
+			groups.set(path, [track]);
 		}
 	}
-	return Array.from(groups, ([type, groupTracks]) => ({type, tracks: groupTracks}))
-		.sort((a, b) => a.type.localeCompare(b.type));
+	return Array.from(groups, ([path, groupTracks]) => ({path, tracks: groupTracks}))
+		.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 export function anyInState(manager: AudioManager, ids: string[], playState: PlayState): boolean {

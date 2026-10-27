@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {isAtOrUnder, movedPath} from "../src/vault-paths";
+import {baseName, folderWithin, isAtOrUnder, movedPath} from "../src/vault-paths";
 
 describe("isAtOrUnder", () => {
 	it("matches the path itself and anything below it", () => {
@@ -23,5 +23,23 @@ describe("movedPath", () => {
 
 	it("returns null for unaffected paths", () => {
 		expect(movedPath("Scenes/Townhall.md", "Scenes/Town", "Places/City")).toBeNull();
+	});
+});
+
+describe("folderWithin", () => {
+	it("is empty for a note directly in the root", () => {
+		expect(folderWithin("Library/Weather.md", "Library")).toBe("");
+	});
+
+	it("is the subfolder path relative to the root, at any depth", () => {
+		expect(folderWithin("Library/Erkundung/Wald.md", "Library")).toBe("Erkundung");
+		expect(folderWithin("Audio/Library/Erkundung/Dul/Höhle.md", "Audio/Library")).toBe("Erkundung/Dul");
+	});
+});
+
+describe("baseName", () => {
+	it("returns the last path segment", () => {
+		expect(baseName("Audio/Library")).toBe("Library");
+		expect(baseName("Library")).toBe("Library");
 	});
 });

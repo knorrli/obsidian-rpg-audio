@@ -15,7 +15,7 @@ Turn your session prep notes into a soundboard — ambience, music, and sound ef
 - **Playlists** — list multiple files and they play in sequence, with optional looping
 - **Layered audio** — run ambience, music, and sound effects simultaneously with independent volume controls
 - **Remembered volumes** — each track's fader position is saved, and faders go up to 200% to boost quiet source files
-- **Fade controls** — fade in/out individual groups (e.g. fade out all ambience) or everything at once
+- **Fade controls** — fade in/out a sidebar section or a library folder (e.g. all your weather sounds) or everything at once
 - **Autoplay** — mark tracks with `autoplay: true` and they start playing as soon as their note opens or is shown in a hover popover, or with `autoplay: hover` to fire from link previews only. Gated by a sidebar toggle so prep stays silent and you only flip it on at the start of a session
 - **Insert track command** — a GUI modal for building `rpg-audio` code blocks without remembering the syntax
 - **Debug overlay** — optional sidebar toggle that shows each track's last event and the active scope set, useful when audio behaves unexpectedly
@@ -166,11 +166,11 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 - **Global controls** — Fade In All, Fade Out All, and Stop All buttons
 - **Master volume slider** — controls the global volume for all tracks
 - **Track sections** — collapsible sections, each listing a track once, in this order:
-  - **Library** — tracks from the library folder, grouped by type (see [Sticky tracks](#sticky-tracks))
+  - **Library** — tracks from the library folder, grouped by folder (see [Sticky tracks](#sticky-tracks))
   - **Pinned** — tracks you pinned, in the order you pinned them
   - **In view** — tracks from notes and hover popovers currently on screen
   - **Elsewhere** — tracks still playing or paused after their note was closed
-- **Per-section fade controls** — fade in or fade out all tracks in a section (or a library type group)
+- **Per-section fade controls** — fade in or fade out all tracks in a section (or a library folder group)
 - **Per-track controls** — play/pause, stop, volume slider, and pin button for each track. The volume slider runs from 0 to 200% with 100% in the middle, remembers its position per track `id` across restarts, and resets to 100% on double-click. Boosting a file with loud peaks above 100% can clip
 - **Playlist status** — current position for multi-file tracks (e.g. "Playing 2/5")
 - **Debug toggle** — bug icon in the footer reveals scope labels, last-event info per track, and the active scope set
@@ -182,6 +182,8 @@ Tracks never reorder when they start or stop playing, so a track stays where you
 Tracks normally leave the sidebar once their note is closed and they're stopped. Two ways to keep them around:
 
 - **Library folder** — set **Settings → RPG Audio → Library folder**. Every `rpg-audio` block in any note inside that folder is always available in the sidebar, whichever note you have open. Good for a base set like weather, crowds, or combat music. Edits to library notes show up immediately.
+
+  The **Library** section has one group per folder that contains tracks, labelled with its path inside the library folder (e.g. `Erkundung/Dul`) and sorted by that path. Tracks from notes directly in the library folder come first, in a group named after the library folder. Subfolders don't nest: a deeper folder is just a longer label. Within a group, tracks are ordered by note name, then by position in the note. Renaming or moving notes and folders regroups the tracks.
 - **Pinning** — select the pin icon on a track, either in the sidebar or on the inline player. Pinned tracks stay in the **Pinned** section until you unpin them, and survive restarts. Use the unpin-all button on the **Pinned** header, or the **Unpin all tracks** command, to clear them after a session.
 
 A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" (once the track is stopped) until you unpin it.
@@ -252,7 +254,7 @@ Prefix a token with `!` to exclude it. Example: `stops: ambient, !crowd-ambient`
 ## Tips
 
 - Reach for `scope:` first when you want "playing a track means switching to its scene." Reach for `stops:` / `pauses:` / `resumes:` for explicit one-shot transitions or cross-cutting exceptions.
-- Keep ambience and SFX as separate types so you can fade out ambience without killing sound effects.
+- Keep ambience and SFX as separate types so `stops:` and `pauses:` can target ambience without killing sound effects.
 - Organize your audio folder by type: `audio/music/`, `audio/ambience/`, `audio/sfx/`.
 - File paths can be absolute from the vault root (`audio/music/tavern.mp3`) or relative to the configured audio folder (`music/tavern.mp3`).
 - When something behaves unexpectedly, toggle the debug bug icon in the sidebar footer to see why each track is in its current state.
@@ -313,7 +315,7 @@ That said, the code is yours to do with as you please (see [License](#license)):
 - **Pull requests** — if you fix a bug or add something useful, feel free to open a PR. I may merge it eventually, but no promises on timing.
 - **Issues** — you're welcome to report bugs, but self-service fixes via PRs are more likely to get addressed.
 - **Local development** — clone the repo into your vault's `.obsidian/plugins/rpg-audio/` folder, run `npm install`, then `npm run dev` to build with hot reload.
-- **Tests** — `npm test` runs the unit tests in `tests/`. They cover the logic that doesn't need Obsidian or audio (block parsing, directives, track registration). Playback and UI are still checked by hand in a vault.
+- **Tests** — `npm test` runs the unit tests in `tests/`. They cover the logic that doesn't need Obsidian or audio (block parsing, directives, track registration, library grouping). Playback and UI are still checked by hand in a vault.
 
 ## AI disclaimer
 

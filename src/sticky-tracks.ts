@@ -3,11 +3,15 @@ import type RpgAudioPlugin from "./main";
 import {AudioManager} from "./audio/audio-manager";
 import {parseAudioBlocksInMarkdown} from "./track-parser";
 import {AudioTrackDef, EVENT_STICKY_CHANGED, PinnedTrackRef} from "./types";
-import {isAtOrUnder, movedPath} from "./vault-paths";
+import {baseName, folderWithin, isAtOrUnder, movedPath} from "./vault-paths";
 
 const REFRESH_DEBOUNCE_MS = 300;
 
 type TrackEntry = {def: AudioTrackDef; sourcePath: string};
+
+function isLibraryNote(path: string, libraryFolder: string): boolean {
+	return path.startsWith(`${libraryFolder}/`) && path.endsWith(".md");
+}
 
 /**
  * Keeps tracks registered after their note closes: every block in the library
@@ -19,6 +23,7 @@ export class StickyTracks extends Events {
 	private manager: AudioManager;
 	private libraryIds: string[] = [];
 	private libraryIdSet: Set<string> = new Set();
+	private libraryFolders: Map<string, string> = new Map();
 	/** Pins whose block was not found in their note on the last refresh. */
 	private unresolvedPins: Set<string> = new Set();
 	private refreshGeneration = 0;
@@ -67,6 +72,15 @@ export class StickyTracks extends Events {
 		return this.plugin.settings.pinnedTracks;
 	}
 
+	/** The library subfolder a library track's note is in, relative to the library folder; "" for the library folder itself. */
+	libraryFolderOf(id: string): string {
+		return this.libraryFolders.get(id) ?? "";
+	}
+
+	get libraryFolderName(): string {
+		return baseName(this.libraryFolder() ?? "");
+	}
+
 	isLibraryTrack(id: string): boolean {
 		return this.libraryIdSet.has(id);
 	}
@@ -102,9 +116,10 @@ export class StickyTracks extends Events {
 	async refresh(): Promise<void> {
 		const generation = ++this.refreshGeneration;
 		const {vault} = this.plugin.app;
+		const root = this.libraryFolder();
 
 		const libraryFiles = vault.getMarkdownFiles()
-			.filter(f => this.isLibraryNote(f.path))
+			.filter(f => root !== null && isLibraryNote(f.path, root))
 			.sort((a, b) => a.path.localeCompare(b.path));
 		const pinPaths = Array.from(new Set(this.pins.map(p => p.path)));
 		const pinFiles = pinPaths.map(path => vault.getFileByPath(path));
@@ -118,10 +133,12 @@ export class StickyTracks extends Events {
 
 		const libraryEntries: TrackEntry[] = [];
 		const libraryIds = new Set<string>();
+		const libraryFolders = new Map<string, string>();
 		libraryFiles.forEach((file, i) => {
 			for (const def of libraryBlocks[i] ?? []) {
 				if (libraryIds.has(def.id)) continue;
 				libraryIds.add(def.id);
+				libraryFolders.set(def.id, folderWithin(file.path, root ?? ""));
 				libraryEntries.push({def, sourcePath: file.path});
 			}
 		});
@@ -139,6 +156,7 @@ export class StickyTracks extends Events {
 
 		this.libraryIds = Array.from(libraryIds);
 		this.libraryIdSet = libraryIds;
+		this.libraryFolders = libraryFolders;
 		this.unresolvedPins = new Set(this.pins.map(p => p.id).filter(id => !libraryIds.has(id) && !resolved.has(id)));
 		this._loaded = true;
 		this.manager.registerAll([...libraryEntries, ...pinEntries]);
@@ -152,11 +170,6 @@ export class StickyTracks extends Events {
 	private libraryFolder(): string | null {
 		const raw = this.plugin.settings.libraryFolder.trim();
 		return raw ? normalizePath(raw) : null;
-	}
-
-	private isLibraryNote(path: string): boolean {
-		const folder = this.libraryFolder();
-		return folder !== null && path.startsWith(`${folder}/`) && path.endsWith(".md");
 	}
 
 	/** True for anything inside the library folder, the folder itself, or a folder containing it. */
@@ -192,7 +205,8 @@ export class StickyTracks extends Events {
 		const pinIds = this.pins.map(p => p.id).filter(id => !this.unresolvedPins.has(id));
 		this.manager.setRetained(new Set([...this.libraryIds, ...pinIds]));
 
-		const signature = JSON.stringify([this.libraryIds, this.pins, Array.from(this.unresolvedPins)]);
+		// Folders are part of the signature: moving a library note between folders keeps its ids and their order.
+		const signature = JSON.stringify([this.libraryIds, Array.from(this.libraryFolders), this.pins, Array.from(this.unresolvedPins)]);
 		if (signature === this.lastSignature) return;
 		this.lastSignature = signature;
 		this.trigger(EVENT_STICKY_CHANGED);
