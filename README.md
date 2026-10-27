@@ -166,8 +166,8 @@ Click the music note icon in the ribbon (or run the **Toggle audio sidebar** com
 - **Global controls** — Fade In All, Fade Out All, and Stop All buttons
 - **Master volume slider** — controls the global volume for all tracks
 - **Track sections** — collapsible sections, each listing a track once, in this order:
-  - **Library** — tracks from the library folder, grouped by folder (see [Sticky tracks](#sticky-tracks))
   - **Pinned** — tracks you pinned, in the order you pinned them
+  - **Library** — tracks from the library folder, grouped by folder (see [Sticky tracks](#sticky-tracks))
   - **In view** — tracks from notes and hover popovers currently on screen
   - **Elsewhere** — tracks still playing or paused after their note was closed
 - **Per-section fade controls** — fade in or fade out all tracks in a section (or a library folder group)
@@ -184,7 +184,7 @@ Tracks normally leave the sidebar once their note is closed and they're stopped.
 - **Library folder** — set **Settings → RPG Audio → Library folder**. Every `rpg-audio` block in any note inside that folder is always available in the sidebar, whichever note you have open. Good for a base set like weather, crowds, or combat music. Edits to library notes show up immediately.
 
   The **Library** section has one group per folder that contains tracks, labelled with its path inside the library folder (e.g. `Erkundung/Dul`) and sorted by that path. Tracks from notes directly in the library folder come first, in a group named after the library folder. Subfolders don't nest: a deeper folder is just a longer label. Within a group, tracks are ordered by note name, then by position in the note. Renaming or moving notes and folders regroups the tracks.
-- **Pinning** — select the pin icon on a track, either in the sidebar or on the inline player. Pinned tracks stay in the **Pinned** section until you unpin them, and survive restarts. Use the unpin-all button on the **Pinned** header, or the **Unpin all tracks** command, to clear them after a session.
+- **Pinning** — select the pin icon on a track, either in the sidebar or on the inline player. Pinned tracks stay in the **Pinned** section until you unpin them, and survive restarts. Library tracks can be pinned too: a pinned library track moves from its folder group to **Pinned**, so you can collapse the library and keep the few tracks a scene needs at the top. Use the unpin-all button on the **Pinned** header, or the **Unpin all tracks** command, to clear them after a session.
 
 A pin remembers the note and track `id`, and re-reads the block from that note, so later edits to the block carry over. If the note or block is gone, the pin shows as "Not found" (once the track is stopped) until you unpin it.
 
