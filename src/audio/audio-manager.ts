@@ -321,7 +321,6 @@ export class AudioManager extends Events {
 		const cause: CauseInput = {kind: "system", detail};
 		for (const id of ids) {
 			if (this.tracks.get(id)?.playState !== PlayState.Paused) continue;
-			this.fades.setMultiplier(id, 0);
 			this.resumeWithFadeIn(id, duration, cause);
 		}
 	}
@@ -436,9 +435,15 @@ export class AudioManager extends Events {
 		});
 	}
 
+	/** Mutes before resuming, since the element starts producing sound before `play()` resolves. */
 	private resumeWithFadeIn(id: string, duration: number, cause: CauseInput): void {
+		this.fades.setMultiplier(id, 0);
 		this.play(id, true, cause).then(() => {
-			this.fadeIn(id, duration);
+			if (this.tracks.get(id)?.playState === PlayState.Playing) {
+				this.fadeIn(id, duration);
+			} else {
+				this.fades.resetMultiplier(id);
+			}
 		}).catch((e) => {
 			console.error(`RPG Audio: fade-in failed for "${id}"`, e);
 		});
