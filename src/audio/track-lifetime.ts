@@ -3,6 +3,8 @@ import {AudioTrackState, PlayState, ORPHAN_CHECK_DELAY_MS} from "../types";
 export interface LifetimeHost {
 	getTrack(id: string): AudioTrackState | undefined;
 	unregister(id: string): void;
+	/** A track not in view got a player. */
+	onEnteredView(id: string): void;
 	/** A track lost its last player but is still playing or paused. */
 	onLeftView(id: string): void;
 }
@@ -22,7 +24,9 @@ export class TrackLifetime {
 	}
 
 	attachPlayer(id: string): void {
+		const wasInView = this.hasPlayers(id);
 		this.playerCounts.set(id, (this.playerCounts.get(id) ?? 0) + 1);
+		if (!wasInView) this.host.onEnteredView(id);
 	}
 
 	detachPlayer(id: string): void {

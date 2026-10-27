@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 import type {App} from "obsidian";
 import {AudioManager} from "../src/audio/audio-manager";
-import {EVENT_SOURCE_RENAMED} from "../src/types";
+import {EVENT_SOURCE_RENAMED, EVENT_TRACKS_UPDATED} from "../src/types";
 import {trackDef} from "./track-state";
 
 function createManager(): AudioManager {
@@ -41,6 +41,21 @@ describe("AudioManager.claim", () => {
 		manager.claim(trackDef({id: "rain"}), "Scenes/Inn.md");
 		manager.registerAll([{def: trackDef({id: "rain"}), sourcePath: "Library/Weather.md"}]);
 		expect(manager.getTrack("rain")?.sourcePath).toBe("Library/Weather.md");
+	});
+});
+
+describe("AudioManager.attachPlayer", () => {
+	it("announces a track's first player, so the sidebar can move it into view", () => {
+		const manager = createManager();
+		manager.claim(trackDef({id: "rain"}), "Scenes/Inn.md");
+		const listener = vi.fn();
+		manager.on(EVENT_TRACKS_UPDATED, listener);
+
+		manager.attachPlayer("rain");
+		manager.attachPlayer("rain");
+
+		expect(manager.hasPlayers("rain")).toBe(true);
+		expect(listener).toHaveBeenCalledTimes(1);
 	});
 });
 
