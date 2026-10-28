@@ -81,6 +81,10 @@ describe("AudioManager.canAutoplayOnHover", () => {
 		expect(trackIn(PlayState.Paused, "user").canAutoplayOnHover("rain")).toBe(false);
 	});
 
+	it("leaves a track faded out from the sidebar", () => {
+		expect(trackIn(PlayState.Paused, "system").canAutoplayOnHover("rain")).toBe(false);
+	});
+
 	it("leaves a playing track alone", () => {
 		expect(trackIn(PlayState.Playing).canAutoplayOnHover("rain")).toBe(false);
 	});

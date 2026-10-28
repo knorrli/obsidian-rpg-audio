@@ -152,8 +152,8 @@ export class AudioManager extends Events {
 
 	/**
 	 * Hovering only starts a track that is stopped or that a directive paused.
-	 * A playing track, including one fading out, and a track paused by hand are
-	 * left alone.
+	 * A playing track, including one fading out, and a track paused by hand or
+	 * faded out from the sidebar are left alone.
 	 */
 	canAutoplayOnHover(id: string): boolean {
 		const state = this.tracks.get(id);

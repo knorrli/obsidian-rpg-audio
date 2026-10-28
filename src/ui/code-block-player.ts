@@ -21,6 +21,13 @@ import {
 	PlayerControlsElements,
 } from "./player-controls";
 
+/**
+ * Track ids each hover popover has already decided to autoplay or not. Blocks
+ * render again inside an open popover (lazy sections, edits), and that must
+ * not count as a new hover.
+ */
+const hoverAutoplayDecided = new WeakMap<HTMLElement, Set<string>>();
+
 export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private app: App;
 	private manager: AudioManager;
@@ -86,16 +93,17 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	}
 
 	private startAutoplay(): void {
-		if (this.def.autoplay === "hover" && !this.mayAutoplayOnHover()) return;
+		if (this.def.autoplay === "hover" && !this.decideHoverAutoplay()) return;
 		void this.manager.play(this.def.id, false, {kind: "autoplay"});
 	}
 
-	private mayAutoplayOnHover(): boolean {
-		return this.claimed && this.isInHoverPopover() && this.manager.canAutoplayOnHover(this.def.id);
-	}
-
-	private isInHoverPopover(): boolean {
-		return this.containerEl.isConnected && !!this.containerEl.closest(".hover-popover");
+	private decideHoverAutoplay(): boolean {
+		const popover = this.containerEl.isConnected ? this.containerEl.closest<HTMLElement>(".hover-popover") : null;
+		if (!popover) return false;
+		const decided = hoverAutoplayDecided.get(popover) ?? new Set<string>();
+		if (decided.has(this.def.id)) return false;
+		hoverAutoplayDecided.set(popover, decided.add(this.def.id));
+		return this.claimed && this.manager.canAutoplayOnHover(this.def.id);
 	}
 
 	onunload(): void {
