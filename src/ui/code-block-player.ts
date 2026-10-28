@@ -21,6 +21,13 @@ import {
 	PlayerControlsElements,
 } from "./player-controls";
 
+/**
+ * Track ids each hover popover has already decided to autoplay or not. Blocks
+ * render again inside an open popover (lazy sections, edits), and that must
+ * not count as a new hover.
+ */
+const hoverAutoplayDecided = new WeakMap<HTMLElement, Set<string>>();
+
 export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	private app: App;
 	private manager: AudioManager;
@@ -66,7 +73,11 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 
 		this.syncState();
 
-		if (this.def.autoplay !== "off" && !wasRegistered && this.manager.allowAutoplay) {
+		// A hover popover is rendered by the hover itself, so it may start a track
+		// another note already shows; elsewhere only a first render autoplays, so
+		// re-rendering an open note doesn't start its tracks again.
+		const mayAutoplay = this.def.autoplay === "hover" || !wasRegistered;
+		if (this.def.autoplay !== "off" && mayAutoplay && this.manager.allowAutoplay) {
 			const delay = this.manager.autoplayDelay;
 			// The block is not reliably attached to its popover yet when it renders,
 			// so hover mode always waits a tick before deciding where it is.
@@ -82,12 +93,17 @@ export class RpgAudioCodeBlockPlayer extends MarkdownRenderChild {
 	}
 
 	private startAutoplay(): void {
-		if (this.def.autoplay === "hover" && !this.isInHoverPopover()) return;
+		if (this.def.autoplay === "hover" && !this.decideHoverAutoplay()) return;
 		void this.manager.play(this.def.id, false, {kind: "autoplay"});
 	}
 
-	private isInHoverPopover(): boolean {
-		return this.containerEl.isConnected && !!this.containerEl.closest(".hover-popover");
+	private decideHoverAutoplay(): boolean {
+		const popover = this.containerEl.isConnected ? this.containerEl.closest<HTMLElement>(".hover-popover") : null;
+		if (!popover) return false;
+		const decided = hoverAutoplayDecided.get(popover) ?? new Set<string>();
+		if (decided.has(this.def.id)) return false;
+		hoverAutoplayDecided.set(popover, decided.add(this.def.id));
+		return this.claimed && this.manager.canAutoplayOnHover(this.def.id);
 	}
 
 	onunload(): void {

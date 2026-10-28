@@ -150,6 +150,18 @@ export class AudioManager extends Events {
 		return this.lifetime.hasPlayers(id);
 	}
 
+	/**
+	 * Hovering only starts a track that is stopped or that a directive paused.
+	 * A playing track, including one fading out, and a track paused by hand or
+	 * faded out from the sidebar are left alone.
+	 */
+	canAutoplayOnHover(id: string): boolean {
+		const state = this.tracks.get(id);
+		if (!state) return false;
+		if (state.playState === PlayState.Stopped) return true;
+		return state.playState === PlayState.Paused && state.lastCause?.kind === "directive";
+	}
+
 	setRetained(ids: Set<string>): void {
 		this.lifetime.setRetained(ids);
 	}

@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 import type {App} from "obsidian";
 import {AudioManager} from "../src/audio/audio-manager";
-import {EVENT_SOURCE_RENAMED, EVENT_TRACKS_UPDATED} from "../src/types";
+import {EVENT_SOURCE_RENAMED, EVENT_TRACKS_UPDATED, PlayState, TrackCauseKind} from "../src/types";
 import {trackDef} from "./track-state";
 
 function createManager(): AudioManager {
@@ -56,6 +56,41 @@ describe("AudioManager.attachPlayer", () => {
 
 		expect(manager.hasPlayers("rain")).toBe(true);
 		expect(listener).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("AudioManager.canAutoplayOnHover", () => {
+	function trackIn(playState: PlayState, causeKind?: TrackCauseKind): AudioManager {
+		const manager = createManager();
+		manager.claim(trackDef({id: "rain"}), "Scenes/Inn.md");
+		const state = manager.getTrack("rain")!;
+		state.playState = playState;
+		state.lastCause = causeKind ? {action: "pause", kind: causeKind, at: 0} : null;
+		return manager;
+	}
+
+	it("starts a stopped track", () => {
+		expect(trackIn(PlayState.Stopped).canAutoplayOnHover("rain")).toBe(true);
+	});
+
+	it("resumes a track a directive paused", () => {
+		expect(trackIn(PlayState.Paused, "directive").canAutoplayOnHover("rain")).toBe(true);
+	});
+
+	it("leaves a track paused by hand", () => {
+		expect(trackIn(PlayState.Paused, "user").canAutoplayOnHover("rain")).toBe(false);
+	});
+
+	it("leaves a track faded out from the sidebar", () => {
+		expect(trackIn(PlayState.Paused, "system").canAutoplayOnHover("rain")).toBe(false);
+	});
+
+	it("leaves a playing track alone", () => {
+		expect(trackIn(PlayState.Playing).canAutoplayOnHover("rain")).toBe(false);
+	});
+
+	it("ignores an unknown track", () => {
+		expect(createManager().canAutoplayOnHover("rain")).toBe(false);
 	});
 });
 
